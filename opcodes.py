@@ -81,19 +81,35 @@ def write_ops_bin(ops: list, ops_out_path: str, verbose: bool):
             f.write(metadata)
 
 
-def create_op_metadata(html_path: str, ops_out_path: str, verbose: bool):
+def write_cb_ops_bin(cb_ops: list, cb_ops_out_path: str, verbose: bool):
+    with open(cb_ops_out_path, 'wb') as f:
+        for op in cb_ops:
+            opcode = op[0].to_bytes(1, 'big')
+            length = int(op[2][:op[2].find('&')]).to_bytes(1, 'big')
+            duration = (int(op[2][op[2].rfind(';')+1:]) // 4).to_bytes(1, 'big')
+            metadata = struct.pack('ccc', opcode, length, duration)
+            if verbose:
+                print(metadata)
+            f.write(metadata)
+
+
+def create_op_metadata(html_path: str, ops_out_path: str, cb_ops_out_path: str, verbose: bool):
     lines = []
     with open(html_path, 'r') as f:
-        lines = f.readlines()
+        lines = f.readlines()[1:]
     ops = parse_ops(lines)
     cb_ops = parse_cb_ops(lines[16:])
     write_ops_bin(ops, ops_out_path, verbose)
+    if verbose:
+        print()
+    write_cb_ops_bin(cb_ops, cb_ops_out_path, verbose)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', metavar='intput_html', default='opcodes.html')
     parser.add_argument('-o', '--output', metavar='ops_bin', default='ops.bin')
+    parser.add_argument('-c', '--cb-output', metavar='cb_ops_bin', default='cb_ops.bin')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
-    create_op_metadata(args.input, args.output, args.verbose)
+    create_op_metadata(args.input, args.output, args.cb_output, args.verbose)
