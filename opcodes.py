@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import struct
 
 SKIP = frozenset({(0xd, 0x3), (0xd, 0xb), (0xd, 0xd),
                   (0xe, 0x3), (0xe, 0x4), (0xe, 0xb), (0xe, 0xc), (0xe, 0xd),
@@ -9,20 +10,23 @@ CB = (0xc, 0xb)
 
 
 def parse_ops(lines: list[str]) -> list:
+    # opcode, [mnemonic_str, duration_str, flags_str]
     ops = []
     for hi in range(0, 16):
         line = lines[hi]
         i = 0
         for lo in range(0, 16):
+            attrs = [(hi << 4) | lo]
             if (hi, lo) in SKIP:
                 # skip over '<td class="withborder">&nbsp;</td>'
                 i += 34
+                ops.append(attrs)
                 continue
             if (hi, lo) == CB:
                 # special case: skip entire cell
                 i += 84
+                ops.append(attrs)
                 continue
-            attrs = [(hi << 4) | lo]
             for _ in range(0, 3):
                 i = line.find('>', i) + 1
                 next = line.find('<', i)
@@ -52,17 +56,44 @@ def parse_cb_ops(lines: list[str]) -> list:
     return cb_ops
 
 
-def parse_opcode_html(html_path: str='opcodes.html'):
+def write_ops_bin(ops: list, ops_out_path: str, verbose: bool):
+    # opcode, length, (duration_hi << 4) | duration_lo
+    with open(ops_out_path, 'wb') as f:
+        for op in ops:
+            opcode = op[0].to_bytes(1, 'big')
+            if len(op) == 1:
+                # special case: unsupported / special opcode
+                metadata = struct.pack('ccc', opcode, b'\x00', b'\x00')
+                if verbose:
+                    print(metadata)
+                f.write(metadata)
+                continue
+            length = int(op[2][:op[2].find('&')]).to_bytes(1, 'big')
+            duration_str = op[2][op[2].rfind(';')+1:]
+            durations = duration_str.split('/')
+            duration = int(durations[0]) // 4
+            if len(durations) == 2:
+                duration = (duration << 4) | (int(durations[-1]) // 4)
+            duration = duration.to_bytes(1, 'big')
+            metadata = struct.pack('ccc', opcode, length, duration)
+            if verbose:
+                print(metadata)
+            f.write(metadata)
+
+
+def create_op_metadata(html_path: str, ops_out_path: str, verbose: bool):
     lines = []
     with open(html_path, 'r') as f:
         lines = f.readlines()
     ops = parse_ops(lines)
     cb_ops = parse_cb_ops(lines[16:])
+    write_ops_bin(ops, ops_out_path, verbose)
 
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('opcode_html')
-    # args = parser.parse_args()
-    # parse_opcode_html(args.opcode_html)
-    parse_opcode_html()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input', metavar='intput_html', default='opcodes.html')
+    parser.add_argument('-o', '--output', metavar='ops_bin', default='ops.bin')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    args = parser.parse_args()
+    create_op_metadata(args.input, args.output, args.verbose)
