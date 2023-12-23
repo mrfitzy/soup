@@ -56,38 +56,64 @@ def parse_cb_ops(lines: list[str]) -> list:
     return cb_ops
 
 
+def parse_opcode(op: list) -> bytes:
+    return op[0].to_bytes(1, 'big')
+
+
+def parse_length(op: list) -> bytes:
+    return int(op[2][:op[2].find('&')]).to_bytes(1, 'big')
+
+
+def parse_duration(op: list) -> bytes:
+    duration_str = op[2][op[2].rfind(';')+1:]
+    durations = duration_str.split('/')
+    duration = int(durations[0]) // 4
+    if len(durations) == 2:
+        duration = (duration << 4) | (int(durations[-1]) // 4)
+    return duration.to_bytes(1, 'big')
+
+
+def parse_flags(op: list) -> bytes:
+    flag_chars = op[3].split(' ')
+    flags = 0
+    for i in range(0, 4):
+        flag = 0
+        c = flag_chars[-(i+1)]
+        if c == '1':
+            flag = 0x1
+        elif c == '0':
+            flag = 0x2
+        elif c != '-':
+            flag = 0x3
+        flags |= (flag << (2*i))
+    return flags.to_bytes(1, 'big')
+
+
 def write_ops_bin(ops: list, ops_out_path: str, verbose: bool):
-    # opcode, length, (duration_hi << 4) | duration_lo
+    '''
+    4 bytes per op
+    opcode, length, ((duration_hi << 4) | duration_lo), flags
+
+    flags: 7 6 5 4 3 2 1 0    for each flag:
+           ---------------      00: unaffected
+           | | | | | | | |      01: set after execution
+           Z Z H H N N C C      10: cleared after execution
+                                11: depends on result of execution
+    '''
     with open(ops_out_path, 'wb') as f:
         for op in ops:
-            opcode = op[0].to_bytes(1, 'big')
+            opcode = parse_opcode(op)
             if len(op) == 1:
                 # special case: unsupported / special opcode
-                metadata = struct.pack('ccc', opcode, b'\x00', b'\x00')
+                metadata = struct.pack('cxxx', opcode)
                 if verbose:
                     print(metadata)
                 f.write(metadata)
                 continue
-            length = int(op[2][:op[2].find('&')]).to_bytes(1, 'big')
-            duration_str = op[2][op[2].rfind(';')+1:]
-            durations = duration_str.split('/')
-            duration = int(durations[0]) // 4
-            if len(durations) == 2:
-                duration = (duration << 4) | (int(durations[-1]) // 4)
-            duration = duration.to_bytes(1, 'big')
-            metadata = struct.pack('ccc', opcode, length, duration)
-            if verbose:
-                print(metadata)
-            f.write(metadata)
-
-
-def write_cb_ops_bin(cb_ops: list, cb_ops_out_path: str, verbose: bool):
-    with open(cb_ops_out_path, 'wb') as f:
-        for op in cb_ops:
-            opcode = op[0].to_bytes(1, 'big')
-            length = int(op[2][:op[2].find('&')]).to_bytes(1, 'big')
-            duration = (int(op[2][op[2].rfind(';')+1:]) // 4).to_bytes(1, 'big')
-            metadata = struct.pack('ccc', opcode, length, duration)
+            length = parse_length(op)
+            duration = parse_duration(op)
+            flags = parse_flags(op)
+            metadata = struct.pack('cccc', opcode, length, duration, flags)
             if verbose:
                 print(metadata)
             f.write(metadata)
@@ -102,7 +128,7 @@ def create_op_metadata(html_path: str, ops_out_path: str, cb_ops_out_path: str, 
     write_ops_bin(ops, ops_out_path, verbose)
     if verbose:
         print()
-    write_cb_ops_bin(cb_ops, cb_ops_out_path, verbose)
+    write_ops_bin(cb_ops, cb_ops_out_path, verbose)
 
 
 if __name__ == "__main__":
