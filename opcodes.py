@@ -104,7 +104,7 @@ def write_ops_bin(ops: list, ops_out_path: str, verbose: bool):
     flags: 7 6 5 4 3 2 1 0    for each flag:
            ---------------      00: unaffected
            | | | | | | | |      01: set after execution
-           Z Z H H N N C C      10: cleared after execution
+           Z Z N N H H C C      10: cleared after execution
                                 11: depends on result of execution
     '''
     with open(ops_out_path, 'wb') as f:
