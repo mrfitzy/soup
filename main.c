@@ -8,6 +8,7 @@
 
 #define OP_SIZE (16)
 #define OPS_BIN_SIZE (OP_SIZE * 256)
+#define DMG_ROM_SIZE (256)
 
 struct op {
   uint8_t opcode;
@@ -18,15 +19,12 @@ struct op {
 };
 _Static_assert(sizeof(struct op) == OP_SIZE, "unexpected size");
 
-static const struct op* ops;
-static const struct op* cb_ops;
-
 static const void*
-map_file(const char* path) {
+map_file(const char* path, size_t size) {
   int fd = open(path, O_RDONLY);
   assert(fd != -1);
 
-  const void* data = mmap(NULL, OPS_BIN_SIZE, PROT_READ, MAP_PRIVATE, fd, 0 /* offset */);
+  const void* data = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0 /* offset */);
   if (data == MAP_FAILED) {
     perror(NULL);
     assert(false);
@@ -90,16 +88,45 @@ print_op(const struct op* op) {
       flag_to_char(op, 'C'));
 }
 
+static void
+print_rom(
+    const struct op* ops,
+    const struct op* cb_ops,
+    const uint8_t* rom,
+    size_t rom_size) {
+  const uint8_t* pc = rom;
+  while (pc < rom + rom_size) {
+    const uint8_t opcode = *pc;
+    const struct op* op = (opcode == 0xcb ? cb_ops + *(pc + 1) : ops + opcode);
+    if (op->length == 0) {
+      fprintf(stderr, "unsupported opcode:\n");
+      print_op(op);
+      assert(false);
+    }
+    printf("%s (len %d)\n", op->text, op->length);
+    pc += op->length;
+  }
+}
+
+static void print_data(const uint8_t* data, size_t length) {
+  printf("%02X", *data);
+  for (size_t i = 1; i < length; i++)
+    printf("%c%02X", (((i % 16 == 0) && (i != 0)) ? '\n' : ' '), data[i]);
+  printf("\n");
+}
+
 int
 main(int argc, char** argv) {
-  if (argc < 3) {
+  if (argc < 4) {
     fprintf(stderr, "error: missing arguments\n");
-    fprintf(stderr, "%s ops.bin cb_ops.bin\n", argv[0]);
+    fprintf(stderr, "%s ops.bin cb_ops.bin dmg_rom.bin\n", argv[0]);
     return 1;
   }
-  ops = map_file(argv[1]);
-  cb_ops = map_file(argv[2]);
-  print_op(ops + 0x35);
-  print_op(cb_ops + 0x7a);
+  const struct op* ops = map_file(argv[1], OPS_BIN_SIZE);
+  const struct op* cb_ops = map_file(argv[2], OPS_BIN_SIZE);
+  const uint8_t* rom = map_file(argv[3], DMG_ROM_SIZE);
+  print_rom(ops, cb_ops, rom, 0xa8);
+  print_data(rom + 0xa8, 0xe0 - 0xa8);
+  print_rom(ops, cb_ops, rom + 0xe0, DMG_ROM_SIZE - 0xe0);
   return 0;
 }

@@ -129,7 +129,8 @@ def write_ops_bin(ops: list, ops_out_path: str, verbose: bool):
 def create_op_metadata(html_path: str, ops_out_path: str, cb_ops_out_path: str, verbose: bool):
     lines = []
     with open(html_path, 'r') as f:
-        lines = f.readlines()[1:]
+        # skip comments
+        lines = f.readlines()[2:]
     ops = parse_ops(lines)
     cb_ops = parse_cb_ops(lines[16:])
     write_ops_bin(ops, ops_out_path, verbose)
