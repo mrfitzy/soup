@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import struct
+import binascii
 
 SKIP = frozenset({(0xd, 0x3), (0xd, 0xb), (0xd, 0xd),
                   (0xe, 0x3), (0xe, 0x4), (0xe, 0xb), (0xe, 0xc), (0xe, 0xd),
@@ -57,11 +57,11 @@ def parse_cb_ops(lines: list[str]) -> list:
 
 
 def parse_opcode(op: list) -> bytes:
-    return op[0].to_bytes(1, 'big')
+    return b'%c' % op[0]
 
 
 def parse_length(op: list) -> bytes:
-    return int(op[2][:op[2].find('&')]).to_bytes(1, 'big')
+    return b'%c' % int(op[2][:op[2].find('&')])
 
 
 def parse_duration(op: list) -> bytes:
@@ -70,7 +70,7 @@ def parse_duration(op: list) -> bytes:
     duration = int(durations[0]) // 4
     if len(durations) == 2:
         duration = (duration << 4) | (int(durations[-1]) // 4)
-    return duration.to_bytes(1, 'big')
+    return b'%c' % duration
 
 
 def parse_flags(op: list) -> bytes:
@@ -86,13 +86,20 @@ def parse_flags(op: list) -> bytes:
         elif c != '-':
             flag = 0x3
         flags |= (flag << (2*i))
-    return flags.to_bytes(1, 'big')
+    return b'%c' % flags
+
+
+def parse_text(op: list) -> bytes:
+    text = bytearray()
+    text.extend(op[1].encode('ascii'))
+    text.extend(b'\x00' * (12 - len(text)))
+    return text
 
 
 def write_ops_bin(ops: list, ops_out_path: str, verbose: bool):
     '''
-    4 bytes per op
-    opcode, length, ((duration_hi << 4) | duration_lo), flags
+    16 bytes per op
+    opcode, length, ((duration_hi << 4) | duration_lo), flags, text0, ..., text11
 
     flags: 7 6 5 4 3 2 1 0    for each flag:
            ---------------      00: unaffected
@@ -103,19 +110,19 @@ def write_ops_bin(ops: list, ops_out_path: str, verbose: bool):
     with open(ops_out_path, 'wb') as f:
         for op in ops:
             opcode = parse_opcode(op)
+            metadata = bytearray()
+            metadata.extend(opcode)
             if len(op) == 1:
                 # special case: unsupported / special opcode
-                metadata = struct.pack('cxxx', opcode)
-                if verbose:
-                    print(metadata)
-                f.write(metadata)
-                continue
-            length = parse_length(op)
-            duration = parse_duration(op)
-            flags = parse_flags(op)
-            metadata = struct.pack('cccc', opcode, length, duration, flags)
+                metadata.extend(b'\x00' * 15)
+            else:
+                length = parse_length(op)
+                duration = parse_duration(op)
+                flags = parse_flags(op)
+                text = parse_text(op)
+                metadata.extend(b'%c%c%c%b' % (length, duration, flags, text))
             if verbose:
-                print(metadata)
+                print(binascii.hexlify(metadata))
             f.write(metadata)
 
 
