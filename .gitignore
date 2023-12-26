@@ -1,4 +1,7 @@
 .vscode/
+build.log
+errors.err
+out.txt
 soup
 soup.dSYM
 

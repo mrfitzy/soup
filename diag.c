@@ -1,0 +1,64 @@
+#include "diag.h"
+
+#include "op.h"
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+
+void
+print_data(const uint8_t* data, size_t length) {
+  printf("%02X", *data);
+  for (size_t i = 1; i < length; i++)
+    printf("%c%02X", (((i % 16 == 0) && (i != 0)) ? '\n' : ' '), data[i]);
+  printf("\n");
+}
+
+static void
+print_op(const struct op* op) {
+  printf("%02x: %s\n%d ", op->opcode, op->text, op->length);
+  uint8_t duration_hi = op_get_duration_hi(op);
+  if (duration_hi != 0) {
+    printf("%d/", duration_hi * 4);
+  }
+  printf("%d\n", op_get_duration_lo(op) * 4);
+  printf(
+      "%c %c %c %c\n",
+      flag_to_char(op, 'Z'),
+      flag_to_char(op, 'N'),
+      flag_to_char(op, 'H'),
+      flag_to_char(op, 'C'));
+}
+
+void
+print_rom(
+    const struct op* ops,
+    const struct op* cb_ops,
+    const uint8_t* rom,
+    size_t rom_size) {
+  const uint8_t* pc = rom;
+  while (pc < rom + rom_size) {
+    const uint8_t opcode = *pc;
+    const struct op* op = (opcode == 0xcb ? cb_ops + *(pc + 1) : ops + opcode);
+    if (op->length == 0) {
+      fprintf(stderr, "unsupported opcode:\n");
+      print_op(op);
+      assert(false);
+    }
+    printf("%s (len %d)\n", op->text, op->length);
+    pc += op->length;
+  }
+}
+
+char
+flag_to_char(const struct op* op, char c) {
+  uint8_t flag = op_get_flag(op, c);
+  if (flag == 0)
+    return '-';
+  if (flag == 1)
+    return '1';
+  if (flag == 2)
+    return '0';
+  assert(flag == 3);
+  return c;
+}
