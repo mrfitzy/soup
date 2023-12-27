@@ -8,6 +8,9 @@ soup: clean_build_logs $(source_files) $(header_files)
 run: soup
 	./soup ops.bin cb_ops.bin DMG_ROM.bin
 
+print: soup
+	./soup -p ops.bin cb_ops.bin DMG_ROM.bin
+
 clean:
 	rm -f soup
 

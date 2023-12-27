@@ -1,6 +1,7 @@
 #include "diag.h"
 
 #include "op.h"
+#include "regs.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -28,6 +29,16 @@ print_op(const struct op* op) {
       flag_to_char(op, 'N'),
       flag_to_char(op, 'H'),
       flag_to_char(op, 'C'));
+}
+
+void
+print_regs(const struct regs* regs) {
+  printf("AF: %04x A: %02x F: %02x\n", regs->af, regs->a, regs->f);
+  printf("BC: %04x B: %02x C: %02x\n", regs->bc, regs->b, regs->c);
+  printf("DE: %04x D: %02x E: %02x\n", regs->de, regs->d, regs->e);
+  printf("HL: %04x H: %02x L: %02x\n", regs->hl, regs->h, regs->l);
+  printf("PC: %04x\n", regs->pc);
+  printf("SP: %04x\n", regs->sp);
 }
 
 void
