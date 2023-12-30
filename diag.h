@@ -8,6 +8,8 @@ struct regs;
 
 void print_data(const uint8_t* data, size_t length);
 
+void print_op(const struct op* op);
+
 void print_regs(const struct regs* regs);
 
 void print_rom(

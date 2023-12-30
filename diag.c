@@ -15,7 +15,7 @@ print_data(const uint8_t* data, size_t length) {
   printf("\n");
 }
 
-static void
+void
 print_op(const struct op* op) {
   printf("%02x: %s\n%d ", op->opcode, op->text, op->length);
   uint8_t duration_hi = op_get_duration_hi(op);
