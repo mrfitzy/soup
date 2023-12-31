@@ -2,7 +2,7 @@ source_files := $(wildcard *.c)
 header_files := $(wildcard *.h)
 
 soup: clean_build_logs $(source_files) $(header_files)
-	bash -c 'clang -g -Werror -Wall -Wextra -o soup $(source_files) \
+	bash -c 'clang -g -Werror -Wall -Wextra -Wpadded -o soup $(source_files) \
 	> >(tee -a build.log) 2> >(tee -a errors.err >&2)'
 
 run: soup

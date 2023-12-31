@@ -39,6 +39,8 @@ print_regs(const struct regs* regs) {
   printf("HL: %04x H: %02x L: %02x\n", regs->hl, regs->h, regs->l);
   printf("PC: %04x\n", regs->pc);
   printf("SP: %04x\n", regs->sp);
+  const struct flags* flag = &regs->flags;
+  printf("z:%d n:%d h:%d c:%d (%x)\n", flag->z, flag->n, flag->h, flag->c, flag->val);
 }
 
 void
