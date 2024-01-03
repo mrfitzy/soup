@@ -1,20 +1,11 @@
 #include "emulate.h"
 
 #include "diag.h"
-#include "op.h"
-#include "regs.h"
+#include "dmg.h"
 
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
-
-struct dmg_system {
-  struct regs regs;
-  const struct op* ops;
-  const struct op* cb_ops;
-  const uint8_t* rom;
-  size_t rom_size;
-};
 
 static inline uint8_t bit_3(uint8_t byte) {
   return (byte & 0b00001000);
@@ -28,25 +19,8 @@ static inline uint8_t bits_7_3(uint8_t byte) {
   return (byte & 0b11111000) >> 3;
 }
 
-static inline uint8_t nibble_5_4(uint8_t byte) {
+static inline uint8_t bits_5_4(uint8_t byte) {
   return (byte & 0b00110000) >> 4;
-}
-
-static inline uint8_t deref(uint16_t addr) {
-  (void)addr;
-  fprintf(stderr, "error: requires memory map (not yet implemented)\n");
-  assert(false);
-}
-
-static void
-regs_init(struct regs* regs) {
-  regs->af = 0x1122;
-  regs->bc = 0x3344;
-  regs->de = 0x5566;
-  regs->hl = 0x7788;
-  regs->sp = 0x99aa;
-  regs->pc = 0x0000;
-  regs->flags.val = 0b10101111;
 }
 
 static inline void
@@ -148,9 +122,10 @@ get_op(const struct dmg_system* dmg) {
 }
 
 static void
-emulate_16_ld_immediate(struct regs* regs, const uint8_t* rom, uint8_t opcode) {
+emulate_ld_r_d16(struct regs* regs, const uint8_t* rom, size_t rom_size, uint8_t opcode) {
   // 16-bit load immediate
-  uint8_t regcode = nibble_5_4(opcode);
+  assert(rom_size > 0);
+  uint8_t regcode = bits_5_4(opcode);
   uint16_t val = *((uint16_t*)(rom + 1));
   printf("LD ");
   if (regcode == 0b00) {
@@ -170,8 +145,52 @@ emulate_16_ld_immediate(struct regs* regs, const uint8_t* rom, uint8_t opcode) {
   printf("$%04x\n", val);
 }
 
+/**
+ * 00 xxy 010: LD A <-> raddr
+ *    ||\
+ *     \ direction
+ *      regcode
+ */
 static void
-emulate_xor_r(struct regs* regs, uint8_t opcode) {
+emulate_ld_raddr_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
+  uint8_t regcode   = bits_5_4(opcode);
+  uint8_t direction = bit_3(opcode);
+  uint16_t addr;
+  const char* reg_name;
+  printf("LD ");
+  switch (regcode) {
+  case 0b00:
+    addr = regs->bc;
+    reg_name = "BC";
+    break;
+  case 0b01:
+    addr = regs->de;
+    reg_name = "DE";
+    break;
+  case 0b10:
+    addr = regs->hl++;
+    reg_name = "HL+";
+    break;
+  case 0b11:
+    addr = regs->hl--;
+    reg_name = "HL-";
+    break;
+  default:
+    fprintf(stderr, "error: unknown regcode %x\n", regcode);
+    assert(false);
+  }
+
+  if (direction == 0) {
+    mem_write(mem, addr, regs->a);
+    printf("(%s), A\n", reg_name);
+  } else {
+    regs->a = mem_read(mem, addr);
+    printf("A, (%s)\n", reg_name);
+  }
+}
+
+static void
+emulate_xor_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode = (opcode & 0b111);
   printf("XOR ");
   switch (regcode) {
@@ -200,7 +219,7 @@ emulate_xor_r(struct regs* regs, uint8_t opcode) {
       printf("L");
       break;
     case 0b110:
-      regs->a ^= deref(regs->hl);
+      regs->a ^= mem_read(mem, regs->hl);
       printf("(HL)");
       break;
     case 0b111:
@@ -218,8 +237,10 @@ static void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* op = get_op(dmg);
   uint8_t opcode = op->opcode;
-  const uint8_t* rom = dmg->rom + dmg->regs.pc;
   struct regs* regs = &dmg->regs;
+  struct mem* mem = &dmg->mem;
+  const uint8_t* rom = dmg->rom + regs->pc;
+  size_t rom_size = dmg->rom_size - regs->pc;
   uint8_t prev_a = regs->a;
   bool handled = true;
   switch (opcode) {
@@ -227,7 +248,7 @@ emulate_instruction(struct dmg_system* dmg) {
   case 0x11:
   case 0x21:
   case 0x31:
-    emulate_16_ld_immediate(regs, rom, opcode);
+    emulate_ld_r_d16(regs, rom, rom_size, opcode);
     break;
   default:
     handled = false;
@@ -238,8 +259,12 @@ emulate_instruction(struct dmg_system* dmg) {
   }
 
   handled = true;
-  if (bits_7_3(opcode) == 0b10101) {
-    emulate_xor_r(regs, opcode);
+  if ((opcode & 0b11000111) == 0b00000010) {
+    // 0b00xxx010
+    emulate_ld_raddr_a_bidi(regs, mem, opcode);
+  } else if (bits_7_3(opcode) == 0b10101) {
+    // 0b10101xxx
+    emulate_xor_r(regs, mem, opcode);
   } else {
     handled = false;
   }
@@ -253,6 +278,8 @@ post_op:
   }
   regs_update_pc(regs, op);
   flags_update_post_op(&regs->flags, op, prev_a, regs->a);
+  fflush(stderr);
+  fflush(stdout);
 }
 
 void
@@ -261,19 +288,16 @@ emulate_rom(
     const struct op* cb_ops,
     const uint8_t* rom,
     size_t rom_size) {
-  struct dmg_system dmg = {
-    .regs = { 0 },
-    .ops = ops,
-    .cb_ops = cb_ops,
-    .rom = rom,
-    .rom_size = rom_size,
-  };
+  struct dmg_system dmg;
+  dmg_init(&dmg, ops, cb_ops, rom, rom_size);
   struct regs* regs = &dmg.regs;
   regs_init(regs);
   print_regs(regs);
+  print_mem(&dmg.mem);
   printf("\n");
   while (regs->pc < rom_size) {
     emulate_instruction(&dmg);
+    print_mem(&dmg.mem);
   }
   fprintf(stderr, "\nerror: pc overload\n");
   print_regs(regs);

@@ -1,10 +1,12 @@
 #include "diag.h"
 
+#include "mem.h"
 #include "op.h"
 #include "regs.h"
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 void
@@ -13,6 +15,38 @@ print_data(const uint8_t* data, size_t length) {
   for (size_t i = 1; i < length; i++)
     printf("%c%02X", (((i % 16 == 0) && (i != 0)) ? '\n' : ' '), data[i]);
   printf("\n");
+}
+
+_Static_assert(sizeof(size_t) == 8, "uhoh");
+
+typedef uint64_t half_row_size_t;
+
+void print_mem(const struct mem* mem) {
+  half_row_size_t lo;
+  half_row_size_t ffs = 0xffffffffffffffff;
+  size_t half_word_size = sizeof(half_row_size_t);
+  const half_row_size_t* ptr = (const half_row_size_t*)mem->mem;
+  half_row_size_t val_lo, val_hi;
+  size_t n = mem->size / half_word_size;
+  size_t b = half_word_size * 2;
+  bool writes = false;
+  printf("mem:\n");
+  for (lo = 0; lo < n; lo += 2) {
+    val_lo = ptr[lo];
+    val_hi = ptr[lo + 1];
+    if ((val_lo != ffs) || (val_hi != ffs)) {
+      writes = true;
+      const uint8_t* iter = (const uint8_t*)(ptr + lo);
+      printf("%04X ", (uint16_t)(iter - mem->mem));
+      for (size_t i = 0; i < b; i++) {
+        printf(" %02X", *(iter++));
+      }
+      printf("\n");
+    }
+  }
+  if (!writes) {
+    printf("no writes\n");
+  }
 }
 
 void
@@ -33,14 +67,14 @@ print_op(const struct op* op) {
 
 void
 print_regs(const struct regs* regs) {
-  printf("AF: %04x A: %02x F: %02x\n", regs->af, regs->a, regs->f);
+  const struct flags* f = &regs->f;
+  printf("AF: %04x A: %02x F: %02x\n", regs->af, regs->a, f->val);
   printf("BC: %04x B: %02x C: %02x\n", regs->bc, regs->b, regs->c);
   printf("DE: %04x D: %02x E: %02x\n", regs->de, regs->d, regs->e);
   printf("HL: %04x H: %02x L: %02x\n", regs->hl, regs->h, regs->l);
   printf("PC: %04x\n", regs->pc);
   printf("SP: %04x\n", regs->sp);
-  const struct flags* flag = &regs->flags;
-  printf("z:%d n:%d h:%d c:%d (%x)\n", flag->z, flag->n, flag->h, flag->c, flag->val);
+  printf("z:%d n:%d h:%d c:%d (%x)\n", f->z, f->n, f->h, f->c, f->val);
 }
 
 void

@@ -26,7 +26,7 @@ struct __attribute__((packed)) flags {
 struct __attribute__((packed)) regs {
   union {
     struct {
-      uint8_t f;
+      struct flags f;
       uint8_t a;
     };
     uint16_t af;
@@ -57,4 +57,6 @@ struct __attribute__((packed)) regs {
   struct flags flags;
   uint8_t pad[3];
 };
+
+void regs_init(struct regs* regs);
 

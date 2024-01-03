@@ -3,10 +3,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+struct mem;
 struct op;
 struct regs;
 
 void print_data(const uint8_t* data, size_t length);
+
+void print_mem(const struct mem* mem);
 
 void print_op(const struct op* op);
 
