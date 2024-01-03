@@ -5,11 +5,16 @@
 #include <string.h>
 
 void
-mem_init(struct mem* mem, uint16_t size) {
-  assert(size == DMG_MEM_SIZE);
-  mem->mem = malloc(size);
-  assert(mem->mem);
-  memset(mem->mem, 0xff, size);
+mem_init(struct mem* mem, uint16_t max_addr) {
+  assert(max_addr == DMG_MAX_ADDR);
+
+  size_t size = (size_t)max_addr + 1;
+  uint8_t* buf = malloc(size);
+  assert(buf);
+
+  memset(buf, 0xff, size);
+  mem->mem = buf;
+  mem->max_addr = max_addr;
   mem->size = size;
 }
 

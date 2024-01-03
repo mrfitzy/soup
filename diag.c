@@ -25,27 +25,35 @@ void print_mem(const struct mem* mem) {
   half_row_size_t lo;
   half_row_size_t ffs = 0xffffffffffffffff;
   size_t half_word_size = sizeof(half_row_size_t);
+  size_t word_size = half_word_size * 2;
+  assert(mem->size % word_size == 0);
   const half_row_size_t* ptr = (const half_row_size_t*)mem->mem;
   half_row_size_t val_lo, val_hi;
   size_t n = mem->size / half_word_size;
-  size_t b = half_word_size * 2;
-  bool writes = false;
-  printf("mem:\n");
+  half_row_size_t last_print = 0;
+  printf("[mem] ");
+  for (size_t i = 0; i < word_size; i++) {
+    printf("%02zX ", i);
+  }
+  printf("\n");
+  for (size_t i = 0; i < (5 + (3 * word_size)); i++) {
+    putchar('-');
+  }
+  printf("\n");
   for (lo = 0; lo < n; lo += 2) {
     val_lo = ptr[lo];
     val_hi = ptr[lo + 1];
-    if ((val_lo != ffs) || (val_hi != ffs)) {
-      writes = true;
+    if ((lo < 4) || (lo > n - 5) || (val_lo != ffs) || (val_hi != ffs)) {
+      if (lo - last_print > 2)
+        printf("...\n");
+      last_print = lo;
       const uint8_t* iter = (const uint8_t*)(ptr + lo);
       printf("%04X ", (uint16_t)(iter - mem->mem));
-      for (size_t i = 0; i < b; i++) {
+      for (size_t i = 0; i < word_size; i++) {
         printf(" %02X", *(iter++));
       }
       printf("\n");
     }
-  }
-  if (!writes) {
-    printf("no writes\n");
   }
 }
 

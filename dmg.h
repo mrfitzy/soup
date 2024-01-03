@@ -21,3 +21,8 @@ void dmg_init(
   const struct op* cb_ops,
   const uint8_t* rom,
   size_t rom_size);
+
+const struct op* dmg_get_op(
+  const struct dmg_system* dmg,
+  const struct op** cb_op_out);
+

@@ -57,7 +57,7 @@ calc_c(uint8_t old_val, uint8_t val) {
 
 #define OLD_FLAG_FMT "%x to "
 
-static void
+static bool
 flags_update_flag_post_op(
     struct flags* flags,
     char flag,
@@ -66,8 +66,9 @@ flags_update_flag_post_op(
     uint8_t val,
     flag_func_t func) {
   uint8_t new_flag_val = 0xff;
+  bool skipped = true;
   if (flagcode == 0b00) {
-    return;
+    return skipped;
   } else if (flagcode == 0b01) {
     new_flag_val = 1;
   } else if (flagcode == 0b10) {
@@ -76,7 +77,7 @@ flags_update_flag_post_op(
     assert(flagcode == 0b11);
     new_flag_val = func(old_val, val);
   }
-  printf("updating flag %c from ", flag);
+  printf("  updating flag %c from ", flag);
   uint8_t old_flag_val;
   switch (flag) {
   case 'z':
@@ -100,6 +101,7 @@ flags_update_flag_post_op(
     assert(false);
   }
   printf(OLD_FLAG_FMT "%x\n", old_flag_val, new_flag_val);
+  return !skipped;
 }
 
 static void
@@ -107,18 +109,15 @@ flags_update_post_op(
     struct flags* flags, const struct op* op, uint8_t old_val, uint8_t val) {
   char flag_chars[] = { 'z', 'n', 'h', 'c' };
   flag_func_t funcs[] = { calc_z, calc_n, calc_h, calc_c };
+  bool all_skipped = false;
   for (size_t i = 0; i < sizeof(flag_chars); i++) {
     char c = flag_chars[i];
     uint8_t flagcode = op_get_flag(op, c);
-    flags_update_flag_post_op(flags, c, flagcode, old_val, val, funcs[i]);
+    all_skipped |=
+        flags_update_flag_post_op(flags, c, flagcode, old_val, val, funcs[i]);
   }
-}
-
-static const struct op*
-get_op(const struct dmg_system* dmg) {
-  assert(dmg->regs.pc < dmg->rom_size);
-  const uint8_t opcode = dmg->rom[dmg->regs.pc];
-  return (opcode == 0xcb) ? &dmg->cb_ops[opcode] : &dmg->ops[opcode];
+  if (!all_skipped)
+    printf("\n");
 }
 
 static void
@@ -234,8 +233,35 @@ emulate_xor_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
 }
 
 static void
+emulate_cb_instruction(
+    struct regs* regs,
+    struct mem* mem,
+    const uint8_t* rom,
+    size_t rom_size,
+    const struct op* cb_op) {
+  (void)regs;
+  assert(rom_size > 1);
+  assert(rom[0] == 0xcb);
+  uint8_t bitopcode = rom[1];
+  bool handled = true;
+  switch (bitopcode) {
+  default:
+    handled = false;
+    break;
+  }
+  if (!handled) {
+    fprintf(stderr, "\nerror: bitopcode %02x not yet implemented\n", bitopcode);
+    print_op(cb_op);
+    print_regs(regs);
+    print_mem(mem);
+    assert(false);
+  }
+}
+
+static void
 emulate_instruction(struct dmg_system* dmg) {
-  const struct op* op = get_op(dmg);
+  const struct op* cb_op;
+  const struct op* op = dmg_get_op(dmg, &cb_op);
   uint8_t opcode = op->opcode;
   struct regs* regs = &dmg->regs;
   struct mem* mem = &dmg->mem;
@@ -249,6 +275,9 @@ emulate_instruction(struct dmg_system* dmg) {
   case 0x21:
   case 0x31:
     emulate_ld_r_d16(regs, rom, rom_size, opcode);
+    break;
+  case 0xcb:
+    emulate_cb_instruction(regs, mem, rom, rom_size, cb_op);
     break;
   default:
     handled = false;
@@ -274,6 +303,7 @@ post_op:
     fprintf(stderr, "\nerror: opcode %02x not yet implemented\n", opcode);
     print_op(op);
     print_regs(regs);
+    print_mem(mem);
     assert(false);
   }
   regs_update_pc(regs, op);
@@ -297,7 +327,6 @@ emulate_rom(
   printf("\n");
   while (regs->pc < rom_size) {
     emulate_instruction(&dmg);
-    print_mem(&dmg.mem);
   }
   fprintf(stderr, "\nerror: pc overload\n");
   print_regs(regs);
