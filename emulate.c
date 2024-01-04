@@ -274,6 +274,27 @@ emulate_jr(
   regs->pc += condition ? jump_len : 1;
 }
 
+/**
+ * 00 xxx 110: LD r,n
+ *     \|
+ *      regcode
+ */
+static void
+emulate_ld_r_n(
+    struct regs* regs,
+    struct mem* mem,
+    const uint8_t* rom,
+    size_t rom_size) {
+  assert(rom_size > 1);
+  uint8_t opcode = rom[0];
+  uint8_t n = rom[1];
+  uint8_t regcode = bits_5_3(opcode);
+  printf("LD ");
+  uint8_t* reg_ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
+  *reg_ptr = n;
+  printf(",$%04x\n", n);
+}
+
 static void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -310,6 +331,9 @@ emulate_instruction(struct dmg_system* dmg) {
   if ((opcode & 0b11000111) == 0b00000010) {
     // 0b00xxx010
     emulate_ld_raddr_a_bidi(regs, mem, opcode);
+  } else if ((opcode & 0b11000111) == 0b00000110) {
+    // 0b00xxx110
+    emulate_ld_r_n(regs, mem, rom, rom_size);
   } else if (bits_7_3(opcode) == 0b10101) {
     // 0b10101xxx
     emulate_xor_r(regs, mem, opcode);
