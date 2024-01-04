@@ -1,6 +1,9 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
+
+struct mem;
 
 // N.B. unions assume little-endian
 
@@ -59,4 +62,6 @@ struct __attribute__((packed)) regs {
 };
 
 void regs_init(struct regs* regs);
+
+uint8_t* regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print);
 

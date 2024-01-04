@@ -1,5 +1,10 @@
 #include "regs.h"
 
+#include "mem.h"
+
+#include <assert.h>
+#include <stdio.h>
+
 _Static_assert(sizeof(struct flags) == 1, "unexpected size");
 _Static_assert(sizeof(struct regs) == 16, "unexpected size");
 
@@ -14,3 +19,48 @@ regs_init(struct regs* regs) {
   regs->flags.val = 0b10101111;
 }
 
+uint8_t*
+regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print) {
+  uint8_t* ptr;
+  char* reg_name;
+  switch (regcode) {
+    case 0b000:
+      ptr = &regs->b;
+      reg_name = "B";
+      break;
+    case 0b001:
+      ptr = &regs->c;
+      reg_name = "C";
+      break;
+    case 0b010:
+      ptr = &regs->d;
+      reg_name = "D";
+      break;
+    case 0b011:
+      ptr = &regs->e;
+      reg_name = "E";
+      break;
+    case 0b100:
+      ptr = &regs->h;
+      reg_name = "H";
+      break;
+    case 0b101:
+      ptr = &regs->l;
+      reg_name = "L";
+      break;
+    case 0b110:
+      ptr = mem->mem + regs->hl;
+      reg_name = "(HL)";
+      break;
+    case 0b111:
+      ptr = &regs->a;
+      reg_name = "A";
+      break;
+    default:
+      fprintf(stderr, "error: unknown regcode %x\n", regcode);
+      assert(false);
+  }
+  if (print)
+    printf("%s", reg_name);
+  return ptr;
+}

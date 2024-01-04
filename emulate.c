@@ -1,27 +1,12 @@
 #include "emulate.h"
 
+#include "bits.h"
 #include "diag.h"
 #include "dmg.h"
 
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
-
-static inline uint8_t bit_3(uint8_t byte) {
-  return (byte & 0b00001000);
-}
-
-static inline uint8_t bit_7(uint8_t byte) {
-  return (byte & 0b10000000);
-}
-
-static inline uint8_t bits_7_3(uint8_t byte) {
-  return (byte & 0b11111000) >> 3;
-}
-
-static inline uint8_t bits_5_4(uint8_t byte) {
-  return (byte & 0b00110000) >> 4;
-}
 
 static inline void
 regs_update_pc(struct regs* regs, const struct op* op) {
@@ -192,47 +177,29 @@ static void
 emulate_xor_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode = (opcode & 0b111);
   printf("XOR ");
-  switch (regcode) {
-    case 0b000:
-      regs->a ^= regs->b;
-      printf("B");
-      break;
-    case 0b001:
-      regs->a ^= regs->c;
-      printf("C");
-      break;
-    case 0b010:
-      regs->a ^= regs->d;
-      printf("D");
-      break;
-    case 0b011:
-      regs->a ^= regs->e;
-      printf("E");
-      break;
-    case 0b100:
-      regs->a ^= regs->h;
-      printf("H");
-      break;
-    case 0b101:
-      regs->a ^= regs->l;
-      printf("L");
-      break;
-    case 0b110:
-      regs->a ^= mem_read(mem, regs->hl);
-      printf("(HL)");
-      break;
-    case 0b111:
-      regs->a ^= regs->a;
-      printf("A");
-      break;
-    default:
-      fprintf(stderr, "error: unknown regcode %x\n", regcode);
-      assert(false);
-  }
+  uint8_t* reg = regs_get_ptr(regs, mem, regcode, true /* print */);
+  regs->a ^= *reg;
   printf("\n");
 }
 
-static void
+/**
+ * 01 bbb rrr: BIT b, r
+ *    \ | \ |
+ *      |   regcode
+ *      bit
+ */
+static uint8_t
+emulate_bit(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
+  uint8_t bit = bits_5_3(bitopcode);
+  uint8_t regcode = bits_2_0(bitopcode);
+  printf("BIT %x,", bit);
+  uint8_t* reg_ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
+  uint8_t res = (*reg_ptr & (1 << bit));
+  printf("\n");
+  return res;
+}
+
+static uint8_t
 emulate_cb_instruction(
     struct regs* regs,
     struct mem* mem,
@@ -244,11 +211,16 @@ emulate_cb_instruction(
   assert(rom[0] == 0xcb);
   uint8_t bitopcode = rom[1];
   bool handled = true;
-  switch (bitopcode) {
-  default:
+  bool has_result = false;
+  uint8_t res;
+  if ((bitopcode & 0b11000000) == 0b01000000) {
+    // 01bbbrrr
+    res = emulate_bit(regs, mem, bitopcode);
+    has_result = true;
+  } else {
     handled = false;
-    break;
   }
+
   if (!handled) {
     fprintf(stderr, "\nerror: bitopcode %02x not yet implemented\n", bitopcode);
     print_op(cb_op);
@@ -256,6 +228,7 @@ emulate_cb_instruction(
     print_mem(mem);
     assert(false);
   }
+  return has_result ? res : regs->a;
 }
 
 static void
@@ -269,6 +242,8 @@ emulate_instruction(struct dmg_system* dmg) {
   size_t rom_size = dmg->rom_size - regs->pc;
   uint8_t prev_a = regs->a;
   bool handled = true;
+  uint8_t res;
+  bool has_result = false;
   switch (opcode) {
   case 0x01:
   case 0x11:
@@ -277,7 +252,8 @@ emulate_instruction(struct dmg_system* dmg) {
     emulate_ld_r_d16(regs, rom, rom_size, opcode);
     break;
   case 0xcb:
-    emulate_cb_instruction(regs, mem, rom, rom_size, cb_op);
+    res = emulate_cb_instruction(regs, mem, rom, rom_size, cb_op);
+    has_result = true;
     break;
   default:
     handled = false;
@@ -306,8 +282,10 @@ post_op:
     print_mem(mem);
     assert(false);
   }
-  regs_update_pc(regs, op);
-  flags_update_post_op(&regs->flags, op, prev_a, regs->a);
+  if (!has_result)
+    res = regs->a;
+  regs_update_pc(regs, cb_op ? cb_op : op);
+  flags_update_post_op(&regs->flags, cb_op ? cb_op : op, prev_a /* fix */, res);
   fflush(stderr);
   fflush(stdout);
 }
