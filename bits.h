@@ -12,6 +12,10 @@ static inline uint8_t bits_2_0(uint8_t byte) {
   return (byte & 0b00000111);
 }
 
+static inline uint8_t bits_4_3(uint8_t byte) {
+  return (byte & 0b00011000) >> 3;
+}
+
 static inline uint8_t bits_5_3(uint8_t byte) {
   return (byte & 0b00111000) >> 3;
 }

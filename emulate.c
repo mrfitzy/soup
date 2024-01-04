@@ -166,10 +166,10 @@ emulate_ld_raddr_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
 
   if (direction == 0) {
     mem_write(mem, addr, regs->a);
-    printf("(%s), A\n", reg_name);
+    printf("(%s),A\n", reg_name);
   } else {
     regs->a = mem_read(mem, addr);
-    printf("A, (%s)\n", reg_name);
+    printf("A,(%s)\n", reg_name);
   }
 }
 
@@ -231,6 +231,49 @@ emulate_cb_instruction(
   return has_result ? res : regs->a;
 }
 
+/**
+ * 00 1cc 000: JR cc,r8
+ *     \|
+ *      condition
+ */
+static void
+emulate_jr(
+    struct regs* regs,
+    struct mem* mem,
+    const uint8_t* rom,
+    size_t rom_size) {
+  (void)mem;
+  assert(rom_size > 1);
+  uint8_t opcode = rom[0];
+  uint8_t condcode = bits_4_3(opcode);
+  bool condition;
+  printf("JR ");
+  switch (condcode) {
+  case 0b00:
+    condition = !regs->flags.z;
+    printf("NZ");
+    break;
+  case 0b01:
+    condition = regs->flags.z;
+    printf("Z");
+    break;
+  case 0b10:
+    condition = !regs->flags.c;
+    printf("NC");
+    break;
+  case 0b11:
+    condition = regs->flags.c;
+    printf("C");
+    break;
+  default:
+    fprintf(stderr, "error: unknown condition %02x", condcode);
+    assert(false);
+  }
+  int8_t jump_len = (int8_t)(rom[1]);
+  printf(",$%04x\n", regs->pc + jump_len);
+  regs->pc += condition ? jump_len : 1;
+}
+
 static void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -270,6 +313,9 @@ emulate_instruction(struct dmg_system* dmg) {
   } else if (bits_7_3(opcode) == 0b10101) {
     // 0b10101xxx
     emulate_xor_r(regs, mem, opcode);
+  } else if ((opcode & 0b11100111) == 0b00100000) {
+    // 0b001xx000
+    emulate_jr(regs, mem, rom, rom_size);
   } else {
     handled = false;
   }
