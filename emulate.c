@@ -321,6 +321,18 @@ emulate_inc(struct regs* regs, struct mem* mem, uint8_t opcode) {
 }
 
 static void
+emulate_ld_r_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
+  uint8_t regcode_dst = bits_5_3(opcode);
+  uint8_t regcode_src = bits_2_0(opcode);
+  printf("LD ");
+  uint8_t* ptr_dst = regs_get_ptr(regs, mem, regcode_dst, true /* print */);
+  printf(",");
+  uint8_t* ptr_src = regs_get_ptr(regs, mem, regcode_src, true /* print */);
+  *ptr_dst = *ptr_src;
+  printf("\n");
+}
+
+static void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
   const struct op* op = dmg_get_op(dmg, &cb_op);
@@ -354,7 +366,10 @@ emulate_instruction(struct dmg_system* dmg) {
   }
 
   handled = true;
-  if ((opcode & 0b11000111) == 0b00000010) {
+  if ((opcode & 0b11000000) == 0b01000000) {
+    // 0b11xxxyyy
+    emulate_ld_r_r(regs, mem, opcode);
+  } else if ((opcode & 0b11000111) == 0b00000010) {
     // 0b00xxx010
     emulate_ld_raddr_a_bidi(regs, mem, opcode);
   } else if ((opcode & 0b11000111) == 0b00000110) {
