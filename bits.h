@@ -4,6 +4,10 @@ static inline uint8_t bit_3(uint8_t byte) {
   return (byte & 0b00001000);
 }
 
+static inline uint8_t bit_4(uint8_t byte) {
+  return (byte & 0b00010000);
+}
+
 static inline uint8_t bit_7(uint8_t byte) {
   return (byte & 0b10000000);
 }

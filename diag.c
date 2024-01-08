@@ -5,9 +5,25 @@
 #include "regs.h"
 
 #include <assert.h>
+#include <execinfo.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#define NUM_FRAMES (16)
+
+void
+print_backtrace(void) {
+  void* callstack[NUM_FRAMES];
+  int n = backtrace(callstack, NUM_FRAMES);
+  char** strs = backtrace_symbols(callstack, n);
+  printf("\n");
+  for (int i = 0; i < n; i++) {
+    printf("%s\n", strs[i]);
+  }
+  free(strs);
+}
 
 void
 print_data(const uint8_t* data, size_t length) {

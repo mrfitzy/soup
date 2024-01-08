@@ -233,8 +233,8 @@ emulate_cb_instruction(
 
 /**
  * 00 1cc 000: JR cc,r8
- *     \|
- *      condition
+ *     ||
+ *     condition
  */
 static void
 emulate_jr(
@@ -269,9 +269,11 @@ emulate_jr(
     fprintf(stderr, "error: unknown condition %02x", condcode);
     assert(false);
   }
-  int8_t jump_len = (int8_t)(rom[1]);
+  int8_t jump_len = (int8_t)(rom[1]) + 2;
   printf(",$%04x\n", regs->pc + jump_len);
-  regs->pc += condition ? jump_len : 1;
+  regs->pc += condition ? jump_len : 2;
+  if (!condition)
+    printf("break\n");
 }
 
 /**
@@ -296,6 +298,19 @@ emulate_ld_r_n(
 }
 
 static void
+emulate_ld_rc_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
+  uint8_t direction = bit_4(opcode);
+  uint16_t addr = 0xff00 + regs->c;
+  if (direction == 0) {
+    printf("LD ($FF00+C),A\n");
+    mem_write(mem, addr, regs->a);
+  } else {
+    printf("LD A,($FF00+C)\n");
+    regs->a = mem_read(mem, addr);
+  }
+}
+
+static void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
   const struct op* op = dmg_get_op(dmg, &cb_op);
@@ -306,6 +321,7 @@ emulate_instruction(struct dmg_system* dmg) {
   size_t rom_size = dmg->rom_size - regs->pc;
   uint8_t prev_a = regs->a;
   bool handled = true;
+  bool pc_handled = false;
   uint8_t res;
   bool has_result = false;
   switch (opcode) {
@@ -334,12 +350,16 @@ emulate_instruction(struct dmg_system* dmg) {
   } else if ((opcode & 0b11000111) == 0b00000110) {
     // 0b00xxx110
     emulate_ld_r_n(regs, mem, rom, rom_size);
-  } else if (bits_7_3(opcode) == 0b10101) {
+  } else if ((opcode & 0b11101111) == 0b11100010) {
+    // 0b111x0010
+    emulate_ld_rc_a_bidi(regs, mem, opcode);
+  }else if (bits_7_3(opcode) == 0b10101) {
     // 0b10101xxx
     emulate_xor_r(regs, mem, opcode);
   } else if ((opcode & 0b11100111) == 0b00100000) {
     // 0b001xx000
     emulate_jr(regs, mem, rom, rom_size);
+    pc_handled = true;
   } else {
     handled = false;
   }
@@ -350,11 +370,13 @@ post_op:
     print_op(op);
     print_regs(regs);
     print_mem(mem);
+    //print_backtrace();
     assert(false);
   }
   if (!has_result)
     res = regs->a;
-  regs_update_pc(regs, cb_op ? cb_op : op);
+  if (!pc_handled)
+    regs_update_pc(regs, cb_op ? cb_op : op);
   flags_update_post_op(&regs->flags, cb_op ? cb_op : op, prev_a /* fix */, res);
   fflush(stderr);
   fflush(stdout);

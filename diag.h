@@ -7,6 +7,8 @@ struct mem;
 struct op;
 struct regs;
 
+void print_backtrace(void);
+
 void print_data(const uint8_t* data, size_t length);
 
 void print_mem(const struct mem* mem);
