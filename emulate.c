@@ -333,6 +333,25 @@ emulate_ld_r_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
 }
 
 static void
+emulate_ld_rn_a_bidi(
+    struct regs* regs,
+    struct mem* mem,
+    const uint8_t* rom,
+    size_t rom_size) {
+  assert(rom_size > 1);
+  uint8_t opcode = rom[0];
+  uint16_t addr = 0xff00 + rom[1];
+  uint8_t direction = bit_4(opcode);
+  if (direction == 0) {
+    printf("LD ($FF00+$%X),A\n", rom[1]);
+    mem_write(mem, addr, regs->a);
+  } else {
+    printf("LD A,($FF00+$%X)\n", rom[1]);
+    regs->a = mem_read(mem, addr);
+  }
+}
+
+static void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
   const struct op* op = dmg_get_op(dmg, &cb_op);
@@ -378,6 +397,9 @@ emulate_instruction(struct dmg_system* dmg) {
   } else if ((opcode & 0b11101111) == 0b11100010) {
     // 0b111x0010
     emulate_ld_rc_a_bidi(regs, mem, opcode);
+  } else if ((opcode & 0b11101111) == 0b11100000) {
+    // 0b111x0000
+    emulate_ld_rn_a_bidi(regs, mem, rom, rom_size);
   } else if ((opcode & 0b11000111) == 0b00000100) {
     // 0b00xxx100
     res = emulate_inc(regs, mem, opcode);
