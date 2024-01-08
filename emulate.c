@@ -310,6 +310,16 @@ emulate_ld_rc_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
   }
 }
 
+static uint8_t
+emulate_inc(struct regs* regs, struct mem* mem, uint8_t opcode) {
+  uint8_t regcode = bits_5_3(opcode);
+  printf("INC ");
+  uint8_t* ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
+  (*ptr)++;
+  printf("\n");
+  return *ptr;
+}
+
 static void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -353,7 +363,11 @@ emulate_instruction(struct dmg_system* dmg) {
   } else if ((opcode & 0b11101111) == 0b11100010) {
     // 0b111x0010
     emulate_ld_rc_a_bidi(regs, mem, opcode);
-  }else if (bits_7_3(opcode) == 0b10101) {
+  } else if ((opcode & 0b11000111) == 0b00000100) {
+    // 0b00xxx100
+    res = emulate_inc(regs, mem, opcode);
+    has_result = true;
+  } else if (bits_7_3(opcode) == 0b10101) {
     // 0b10101xxx
     emulate_xor_r(regs, mem, opcode);
   } else if ((opcode & 0b11100111) == 0b00100000) {
