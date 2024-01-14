@@ -1,8 +1,13 @@
-source_files := $(wildcard *.c)
+main_c := main.c
+test_main_c := test_main.c
+main_files := $(main_c) $(test_main_c)
+source_files := $(filter-out $(main_files), $(wildcard *.c))
 header_files := $(wildcard *.h)
 
-soup: clean_build_logs $(source_files) $(header_files)
-	bash -c 'clang -g -Werror -Wall -Wextra -Wpadded -o soup $(source_files) \
+soup_source_files := $(source_files) $(main_c)
+
+soup: clean_build_logs $(soup_source_files) $(header_files)
+	bash -c 'clang -g -Werror -Wall -Wextra -Wpadded -o soup $(soup_source_files) \
 	> >(tee -a build.log) 2> >(tee -a errors.err >&2)'
 
 run: soup
@@ -11,8 +16,18 @@ run: soup
 print: soup
 	./soup -p ops.bin cb_ops.bin DMG_ROM.bin
 
+test_source_files := $(source_files) $(test_main_c)
+
+test_soup: clean_build_logs $(test_source_files) $(header_files)
+	bash -c 'clang -g -Werror -Wall -Wextra -o test_soup $(test_source_files) \
+	-I /opt/homebrew/Cellar/cmocka/1.1.7/include -l cmocka \
+	> >(tee -a build.log) 2> >(tee -a errors.err >&2)'
+
+test_run: test_soup
+	./test_soup
+
 clean:
-	rm -f soup
+	rm -f soup test_soup
 
 clean_build_logs:
 	rm -f build.log errors.err
