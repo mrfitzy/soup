@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 _Static_assert(sizeof(struct flags) == 1, "unexpected size");
 _Static_assert(sizeof(struct regs) == 16, "unexpected size");
@@ -17,6 +18,7 @@ regs_init(struct regs* regs) {
   regs->sp = 0x99aa;
   regs->pc = 0x0000;
   regs->flags.val = 0b10101111;
+  memset(regs->pad, 0xff, sizeof(regs->pad));
 }
 
 uint8_t*

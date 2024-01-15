@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define OP_SIZE	(16)
+
 struct __attribute__((packed)) op {
   uint8_t opcode;
   uint8_t length;

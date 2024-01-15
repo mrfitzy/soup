@@ -351,7 +351,7 @@ emulate_ld_rn_a_bidi(
   }
 }
 
-static void
+void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
   const struct op* op = dmg_get_op(dmg, &cb_op);
@@ -442,7 +442,6 @@ emulate_rom(
   struct dmg_system dmg;
   dmg_init(&dmg, ops, cb_ops, rom, rom_size);
   struct regs* regs = &dmg.regs;
-  regs_init(regs);
   print_regs(regs);
   print_mem(&dmg.mem);
   printf("\n");

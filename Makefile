@@ -10,11 +10,13 @@ soup: clean_build_logs $(soup_source_files) $(header_files)
 	bash -c 'clang -g -Werror -Wall -Wextra -Wpadded -o soup $(soup_source_files) \
 	> >(tee -a build.log) 2> >(tee -a errors.err >&2)'
 
+soup_args := ops.bin cb_ops.bin DMG_ROM.bin
+
 run: soup
-	./soup ops.bin cb_ops.bin DMG_ROM.bin
+	./soup $(soup_args)
 
 print: soup
-	./soup -p ops.bin cb_ops.bin DMG_ROM.bin
+	./soup -p $(soup_args)
 
 test_source_files := $(source_files) $(test_main_c)
 
@@ -23,8 +25,8 @@ test_soup: clean_build_logs $(test_source_files) $(header_files)
 	-I /opt/homebrew/Cellar/cmocka/1.1.7/include -l cmocka \
 	> >(tee -a build.log) 2> >(tee -a errors.err >&2)'
 
-test_run: test_soup
-	./test_soup
+test: test_soup
+	./test_soup $(soup_args)
 
 clean:
 	rm -f soup test_soup
