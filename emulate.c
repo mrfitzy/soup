@@ -351,6 +351,26 @@ emulate_ld_rn_a_bidi(
   }
 }
 
+static void
+emulate_call(
+    struct regs* regs,
+    struct mem* mem,
+    const uint8_t* rom,
+    size_t rom_size) {
+  (void)regs;
+  (void)mem;
+  assert(rom_size > 2);
+  uint8_t lo = rom[1];
+  uint8_t hi = rom[2];
+  uint16_t addr = ((hi << 8) | lo);
+  printf("CALL $%04X\n", addr);
+  regs->pc += 3;
+  mem_write(mem, (regs->sp - 1), regs->pc_hi);
+  mem_write(mem, (regs->sp - 2), regs->pc_lo);
+  regs->sp -= 2;
+  regs->pc = addr;
+}
+
 void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -375,6 +395,10 @@ emulate_instruction(struct dmg_system* dmg) {
   case 0xcb:
     res = emulate_cb_instruction(regs, mem, rom, rom_size, cb_op);
     has_result = true;
+    break;
+  case 0xcd:
+    emulate_call(regs, mem, rom, rom_size);
+    pc_handled = true;
     break;
   default:
     handled = false;

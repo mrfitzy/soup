@@ -56,7 +56,13 @@ struct __attribute__((packed)) regs {
     uint16_t hl;
   };
   uint16_t sp;
-  uint16_t pc;
+  union {
+    struct {
+      uint8_t pc_lo;
+      uint8_t pc_hi;
+    };
+    uint16_t pc;
+  };
   struct flags flags;
   uint8_t pad[3];
 };

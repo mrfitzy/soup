@@ -229,6 +229,13 @@ test_emulate_boot_rom(void** state) {
   regs->a = mem[0x0104];
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // CALL $0095
+  mem[0xfffd] = 0x00;
+  mem[0xfffc] = 0x2b;
+  regs->sp = 0xfffc;
+  regs->pc = 0x0095;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
 
 int main(int argc, char** argv) {
