@@ -17,7 +17,7 @@ regs_init(struct regs* regs) {
   regs->hl = 0x7788;
   regs->sp = 0x99aa;
   regs->pc = 0x0000;
-  regs->flags.val = 0b10101111;
+  regs->flags.val = 0;
   memset(regs->pad, 0xff, sizeof(regs->pad));
 }
 
