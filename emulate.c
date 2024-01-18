@@ -40,20 +40,18 @@ calc_c(uint8_t old_val, uint8_t val) {
   return (bit_7(old_val) ^ bit_7(val)) ? 1 : 0;
 }
 
-#define OLD_FLAG_FMT "%x to "
-
 static bool
-flags_update_flag_post_op(
-    struct flags* flags,
+update_flag_post_op(
+    struct regs* regs,
     char flag,
     uint8_t flagcode,
     uint8_t old_val,
     uint8_t val,
     flag_func_t func) {
+  bool printed = true;
   uint8_t new_flag_val = 0xff;
-  bool skipped = true;
   if (flagcode == 0b00) {
-    return skipped;
+    return !printed; // skip
   } else if (flagcode == 0b01) {
     new_flag_val = 1;
   } else if (flagcode == 0b10) {
@@ -62,46 +60,56 @@ flags_update_flag_post_op(
     assert(flagcode == 0b11);
     new_flag_val = func(old_val, val);
   }
-  printf("  updating flag %c from ", flag);
+  struct flags* flags = &regs->f;
+  struct flags* dirty_flags = &regs->dirty_flags;
+  uint8_t updated;
   uint8_t old_flag_val;
   switch (flag) {
   case 'z':
+    updated = dirty_flags->z;
     old_flag_val = flags->z;
-    flags->z = new_flag_val;
+    flags->z = updated ? flags->z : new_flag_val;
     break;
   case 'n':
+    updated = dirty_flags->n;
     old_flag_val = flags->n;
-    flags->n = new_flag_val;
+    flags->n = updated ? flags->n : new_flag_val;
     break;
   case 'h':
+    updated = dirty_flags->h;
     old_flag_val = flags->h;
-    flags->h = new_flag_val;
+    flags->h = updated ? flags->h : new_flag_val;
     break;
   case 'c':
+    updated = dirty_flags->c;
     old_flag_val = flags->c;
-    flags->c = new_flag_val;
+    flags->c = updated ? flags->c : new_flag_val;
     break;
   default:
     fprintf(stderr, "error: unknown flag %c\n", flag);
     assert(false);
   }
-  printf(OLD_FLAG_FMT "%x\n", old_flag_val, new_flag_val);
-  return !skipped;
+  if (updated)
+    return !printed;
+  printf("  updating flag %c from %x to %x\n",
+      flag, old_flag_val, new_flag_val);
+  return printed;
 }
 
 static void
-flags_update_post_op(
-    struct flags* flags, const struct op* op, uint8_t old_val, uint8_t val) {
+update_flags_post_op(
+    struct regs* regs, const struct op* op, uint8_t old_val, uint8_t val) {
   char flag_chars[] = { 'z', 'n', 'h', 'c' };
   flag_func_t funcs[] = { calc_z, calc_n, calc_h, calc_c };
-  bool all_skipped = false;
+  bool printed = false;
   for (size_t i = 0; i < sizeof(flag_chars); i++) {
     char c = flag_chars[i];
     uint8_t flagcode = op_get_flag(op, c);
-    all_skipped |=
-        flags_update_flag_post_op(flags, c, flagcode, old_val, val, funcs[i]);
+    printed |=
+        update_flag_post_op(regs, c, flagcode, old_val, val, funcs[i]);
   }
-  if (!all_skipped)
+  regs->dirty_flags.val = 0;
+  if (printed)
     printf("\n");
 }
 
@@ -199,6 +207,25 @@ emulate_bit(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
   return res;
 }
 
+static void
+regs_update_cy(struct regs* regs, bool set) {
+  assert(!regs->dirty_flags.c);
+  printf("  updating flag c from %x to %x (manually)\n", regs->f.c, set);
+  regs->f.c = set ? 1 : 0;
+  regs->dirty_flags.c = 1;
+}
+
+static uint8_t
+emulate_rl(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
+  uint8_t regcode = bits_2_0(bitopcode);
+  printf("RL ");
+  uint8_t* reg_ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
+  printf("\n");
+  *reg_ptr <<= 1;
+  regs_update_cy(regs, bit_7(*reg_ptr));
+  return *reg_ptr;
+}
+
 static uint8_t
 emulate_rl(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
   // RESUME: prevent c from being updated by flags_update_post_op: it should be
@@ -276,19 +303,19 @@ emulate_jr(
   printf("JR ");
   switch (condcode) {
   case 0b00:
-    condition = !regs->flags.z;
+    condition = !regs->f.z;
     printf("NZ");
     break;
   case 0b01:
-    condition = regs->flags.z;
+    condition = regs->f.z;
     printf("Z");
     break;
   case 0b10:
-    condition = !regs->flags.c;
+    condition = !regs->f.c;
     printf("NC");
     break;
   case 0b11:
-    condition = regs->flags.c;
+    condition = regs->f.c;
     printf("C");
     break;
   default:
@@ -491,7 +518,7 @@ post_op:
     res = regs->a;
   if (!pc_handled)
     regs_update_pc(regs, cb_op ? cb_op : op);
-  flags_update_post_op(&regs->flags, cb_op ? cb_op : op, prev_a /* fix */, res);
+  update_flags_post_op(regs, cb_op ? cb_op : op, prev_a /* fix */, res);
   fflush(stderr);
   fflush(stdout);
 }

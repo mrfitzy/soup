@@ -7,17 +7,18 @@
 #include <string.h>
 
 _Static_assert(sizeof(struct flags) == 1, "unexpected size");
-_Static_assert(sizeof(struct regs) == 16, "unexpected size");
+_Static_assert(sizeof(struct regs) == 14, "unexpected size");
 
 void
 regs_init(struct regs* regs) {
-  regs->af = 0x1122;
-  regs->bc = 0x3344;
-  regs->de = 0x5566;
-  regs->hl = 0x7788;
-  regs->sp = 0x99aa;
+  regs->af = 0x1100;
+  regs->bc = 0x2233;
+  regs->de = 0x4455;
+  regs->hl = 0x6677;
+  regs->sp = 0x8899;
   regs->pc = 0x0000;
-  regs->flags.val = 0;
+
+  regs->dirty_flags.val = 0;
   memset(regs->pad, 0xff, sizeof(regs->pad));
 }
 

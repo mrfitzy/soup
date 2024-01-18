@@ -6,6 +6,7 @@
 
 #include <unistd.h>
 
+#pragma clang diagnostic ignored "-Wpadded"
 struct dmg_system {
   struct regs regs;
   struct mem mem;

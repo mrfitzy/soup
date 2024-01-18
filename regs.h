@@ -13,7 +13,7 @@ struct mem;
  *                 | | | | | | | |
  *                 z n h c - - - -
  */
-struct __attribute__((packed)) flags {
+struct flags {
   union {
     struct {
       uint8_t unused: 4;
@@ -63,8 +63,8 @@ struct regs {
     };
     uint16_t pc;
   };
-  struct flags flags;
-  uint8_t pad[3];
+  struct flags dirty_flags;
+  uint8_t pad[1];
 };
 
 void regs_init(struct regs* regs);

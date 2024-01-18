@@ -55,13 +55,16 @@ assert_flags_equal(const struct flags* a, const struct flags* b) {
 
 static void
 assert_regs_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->af, &b->af, 2);
-  assert_memory_equal(&a->bc, &b->bc, 2);
-  assert_memory_equal(&a->de, &b->de, 2);
-  assert_memory_equal(&a->hl, &b->hl, 2);
+  assert_memory_equal(&a->a, &b->a, 1);
+  assert_flags_equal(&a->f, &b->f);
+  assert_memory_equal(&a->b, &b->b, 1);
+  assert_memory_equal(&a->c, &b->c, 1);
+  assert_memory_equal(&a->d, &b->d, 1);
+  assert_memory_equal(&a->e, &b->e, 1);
+  assert_memory_equal(&a->h, &b->h, 1);
+  assert_memory_equal(&a->l, &b->l, 1);
   assert_memory_equal(&a->sp, &b->sp, 2);
   assert_memory_equal(&a->pc, &b->pc, 2);
-  assert_flags_equal(&a->flags, &b->flags);
   assert_memory_equal(a, b, sizeof(struct regs));
 }
 
@@ -85,11 +88,11 @@ emulate_instruction_and_assert_dmg_equal(
 
 /**
  * af: ce 22
- * bc: 04 ce
+ * bc: 04 9c
  * de: 01 04
  * hl: 80 10
- * sp: ff fc
- * pc: 00 11
+ * sp: ff fa
+ * pc: 00 99
  *
  * z: 0
  * n: 0
@@ -104,7 +107,7 @@ test_emulate_boot_rom(void** state) {
   struct dmg_system expect;
   dmg_init(&expect, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
   struct regs* regs = &expect.regs;
-  struct flags* flags = &regs->flags;
+  struct flags* flags = &regs->f;
   uint8_t* mem = expect.mem.mem;
 
   // LD SP,$fffe
@@ -254,6 +257,15 @@ test_emulate_boot_rom(void** state) {
   mem[0xfffa] = 0xce;
   regs->sp = 0xfffa;
   regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // RL C
+  regs->c = 0x9c; // 0xce << 1
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  flags->c = 1; // bit_7(0xce)
+  regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
 
