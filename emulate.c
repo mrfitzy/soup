@@ -200,6 +200,17 @@ emulate_bit(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
 }
 
 static uint8_t
+emulate_rl(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
+  // RESUME: prevent c from being updated by flags_update_post_op: it should be
+  // set to bit 7
+  //  ^ for ALL rotate shift instructions (except swap?)
+  (void)regs;
+  (void)mem;
+  (void)bitopcode;
+  return 0;
+}
+
+static uint8_t
 emulate_cb_instruction(
     struct regs* regs,
     struct mem* mem,
@@ -213,6 +224,20 @@ emulate_cb_instruction(
   bool handled = true;
   bool has_result = false;
   uint8_t res;
+  switch (bitopcode) {
+  case 0x10: case 0x11: case 0x12: case 0x13:
+  case 0x14: case 0x15: case 0x16: case 0x17:
+    res = emulate_rl(regs, mem, bitopcode);
+    has_result = true;
+    break;
+  default:
+    handled = false;
+    break;
+  }
+  if (handled)
+    goto post_cb_op;
+
+  handled = true;
   if ((bitopcode & 0b11000000) == 0b01000000) {
     // 01bbbrrr
     res = emulate_bit(regs, mem, bitopcode);
@@ -221,6 +246,7 @@ emulate_cb_instruction(
     handled = false;
   }
 
+post_cb_op:
   if (!handled) {
     fprintf(stderr, "\nerror: bitopcode %02x not yet implemented\n", bitopcode);
     print_op(cb_op);
@@ -400,16 +426,10 @@ emulate_instruction(struct dmg_system* dmg) {
   uint8_t res;
   bool has_result = false;
   switch (opcode) {
-  case 0x01:
-  case 0x11:
-  case 0x21:
-  case 0x31:
+  case 0x01: case 0x11: case 0x21: case 0x31:
     emulate_ld_r_d16(regs, rom, rom_size, opcode);
     break;
-  case 0xc5:
-  case 0xd5:
-  case 0xe5:
-  case 0xf5:
+  case 0xc5: case 0xd5: case 0xe5: case 0xf5:
     emulate_push(regs, mem, opcode);
     break;
   case 0xcb:
@@ -424,9 +444,8 @@ emulate_instruction(struct dmg_system* dmg) {
     handled = false;
     break;
   }
-  if (handled) {
+  if (handled)
     goto post_op;
-  }
 
   handled = true;
   if ((opcode & 0b11000000) == 0b01000000) {
