@@ -66,3 +66,34 @@ regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print) {
     printf("%s", reg_name);
   return ptr;
 }
+
+uint16_t*
+regs_get_ptr16(struct regs* regs, uint8_t regcode, bool print) {
+  uint16_t* ptr;
+  char* reg_name;
+  switch (regcode) {
+    case 0b00:
+      ptr = &regs->bc;
+      reg_name = "BC";
+      break;
+    case 0b01:
+      ptr = &regs->de;
+      reg_name = "DE";
+      break;
+    case 0b10:
+      ptr = &regs->hl;
+      reg_name = "HL";
+      break;
+    case 0b11:
+      ptr = &regs->af;
+      reg_name = "AF";
+      break;
+    default:
+      fprintf(stderr, "error: unknown regcode %x\n", regcode);
+      assert(false);
+  }
+  if (print)
+    printf("%s", reg_name);
+  return ptr;
+}
+

@@ -84,12 +84,12 @@ emulate_instruction_and_assert_dmg_equal(
 }
 
 /**
- * af: fc22
- * bc: 3312
- * de: 0104
- * hl: 8010
- * sp: fffe
- * pc: 0011
+ * af: ce 22
+ * bc: 04 ce
+ * de: 01 04
+ * hl: 80 10
+ * sp: ff fc
+ * pc: 00 11
  *
  * z: 0
  * n: 0
@@ -226,6 +226,7 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // LD A,(DE)
+  // "Nintendo" Character Data (0104H~0133H)
   regs->a = mem[0x0104];
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
@@ -236,9 +237,28 @@ test_emulate_boot_rom(void** state) {
   regs->sp = 0xfffc;
   regs->pc = 0x0095;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // Graphic routine: $0095
+  // LD C,A
+  regs->c = 0xce;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD B,$04
+  regs->b = 0x04;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // PUSH BC
+  mem[0xfffb] = 0x04;
+  mem[0xfffa] = 0xce;
+  regs->sp = 0xfffa;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   argc--;
   argv++;
   struct soup_args args;

@@ -294,7 +294,7 @@ emulate_ld_r_n(
   printf("LD ");
   uint8_t* reg_ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   *reg_ptr = n;
-  printf(",$%04x\n", n);
+  printf(",$%02x\n", n);
 }
 
 static void
@@ -371,6 +371,20 @@ emulate_call(
   regs->pc = addr;
 }
 
+static void
+emulate_push(struct regs* regs, struct mem* mem, uint8_t opcode) {
+  uint8_t regcode = bits_5_4(opcode);
+  printf("PUSH ");
+  uint8_t* reg_ptr = (uint8_t*)regs_get_ptr16(regs, regcode, true /* print */);
+  printf("\n");
+  // N.B. assumes little-endian
+  uint8_t lo = reg_ptr[0];
+  uint8_t hi = reg_ptr[1];
+  mem_write(mem, (regs->sp - 1), hi);
+  mem_write(mem, (regs->sp - 2), lo);
+  regs->sp -= 2;
+}
+
 void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -391,6 +405,12 @@ emulate_instruction(struct dmg_system* dmg) {
   case 0x21:
   case 0x31:
     emulate_ld_r_d16(regs, rom, rom_size, opcode);
+    break;
+  case 0xc5:
+  case 0xd5:
+  case 0xe5:
+  case 0xf5:
+    emulate_push(regs, mem, opcode);
     break;
   case 0xcb:
     res = emulate_cb_instruction(regs, mem, rom, rom_size, cb_op);
