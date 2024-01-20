@@ -216,25 +216,16 @@ regs_update_cy(struct regs* regs, bool set) {
 }
 
 static uint8_t
-emulate_rl(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
+emulate_rl(struct regs* regs, struct mem* mem, uint8_t bitopcode, bool cb_op) {
   uint8_t regcode = bits_2_0(bitopcode);
-  printf("RL ");
+  printf("RL");
+  if (cb_op)
+    printf(" ");
   uint8_t* reg_ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   printf("\n");
   *reg_ptr <<= 1;
   regs_update_cy(regs, bit_7(*reg_ptr));
   return *reg_ptr;
-}
-
-static uint8_t
-emulate_rl(struct regs* regs, struct mem* mem, uint8_t bitopcode) {
-  // RESUME: prevent c from being updated by flags_update_post_op: it should be
-  // set to bit 7
-  //  ^ for ALL rotate shift instructions (except swap?)
-  (void)regs;
-  (void)mem;
-  (void)bitopcode;
-  return 0;
 }
 
 static uint8_t
@@ -254,7 +245,7 @@ emulate_cb_instruction(
   switch (bitopcode) {
   case 0x10: case 0x11: case 0x12: case 0x13:
   case 0x14: case 0x15: case 0x16: case 0x17:
-    res = emulate_rl(regs, mem, bitopcode);
+    res = emulate_rl(regs, mem, bitopcode, true /* cb_op */);
     has_result = true;
     break;
   default:
@@ -455,6 +446,9 @@ emulate_instruction(struct dmg_system* dmg) {
   switch (opcode) {
   case 0x01: case 0x11: case 0x21: case 0x31:
     emulate_ld_r_d16(regs, rom, rom_size, opcode);
+    break;
+  case 0x17: // short-circuit for RL A
+    emulate_rl(regs, mem, opcode, false /* cb_op */);
     break;
   case 0xc5: case 0xd5: case 0xe5: case 0xf5:
     emulate_push(regs, mem, opcode);

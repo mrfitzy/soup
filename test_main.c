@@ -97,7 +97,7 @@ emulate_instruction_and_assert_dmg_equal(
  * z: 0
  * n: 0
  * h: 0
- * c: 0
+ * c: 1
  */
 static void
 test_emulate_boot_rom(void** state) {
@@ -266,6 +266,15 @@ test_emulate_boot_rom(void** state) {
   flags->h = 0;
   flags->c = 1; // bit_7(0xce)
   regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // RLA
+  regs->a = 0x9c; // 0xce << 1
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  flags->c = 1; // bit_7(0xce)
+  regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
 
