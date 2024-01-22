@@ -429,6 +429,20 @@ emulate_push(struct regs* regs, struct mem* mem, uint8_t opcode) {
   regs->sp -= 2;
 }
 
+static void
+emulate_pop(struct regs* regs, struct mem* mem, uint8_t opcode) {
+  uint8_t regcode = bits_5_4(opcode);
+  printf("POP ");
+  uint8_t* reg_ptr = (uint8_t*)regs_get_ptr16(regs, regcode, true /* print */);
+  printf("\n");
+  // N.B. assumes little-endian
+  uint8_t lo = mem_read(mem, regs->sp);
+  uint8_t hi = mem_read(mem, (regs->sp + 1));
+  reg_ptr[0] = lo;
+  reg_ptr[1] = hi;
+  regs->sp += 2;
+}
+
 void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -449,6 +463,9 @@ emulate_instruction(struct dmg_system* dmg) {
     break;
   case 0x17: // short-circuit for RL A
     emulate_rl(regs, mem, opcode, false /* cb_op */);
+    break;
+  case 0xc1: case 0xd1: case 0xe1: case 0xf1:
+    emulate_pop(regs, mem, opcode);
     break;
   case 0xc5: case 0xd5: case 0xe5: case 0xf5:
     emulate_push(regs, mem, opcode);

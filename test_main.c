@@ -87,11 +87,11 @@ emulate_instruction_and_assert_dmg_equal(
 }
 
 /**
- * af: ce 22
- * bc: 04 9c
+ * af: 9c 22
+ * bc: 04 ce
  * de: 01 04
  * hl: 80 10
- * sp: ff fa
+ * sp: ff fc
  * pc: 00 99
  *
  * z: 0
@@ -274,6 +274,12 @@ test_emulate_boot_rom(void** state) {
   flags->n = 0;
   flags->h = 0;
   flags->c = 1; // bit_7(0xce)
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // POP BC
+  regs->bc = 0x04ce;
+  regs->sp = 0xfffc;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
