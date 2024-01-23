@@ -88,7 +88,7 @@ emulate_instruction_and_assert_dmg_equal(
 
 /**
  * af: 9c 22
- * bc: 04 ce
+ * bc: 03 9c
  * de: 01 04
  * hl: 80 10
  * sp: ff fc
@@ -252,6 +252,7 @@ test_emulate_boot_rom(void** state) {
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
+  // Addr_00098
   // PUSH BC
   mem[0xfffb] = 0x04;
   mem[0xfffa] = 0xce;
@@ -280,6 +281,32 @@ test_emulate_boot_rom(void** state) {
   // POP BC
   regs->bc = 0x04ce;
   regs->sp = 0xfffc;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // RL C
+  regs->c = 0x9c; // 0xce << 1
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  flags->c = 1; // bit_7(0xce)
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // RLA
+  regs->a = 0x38; // 0x9c << 1
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  flags->c = 1; // bit_7(0x9c)
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // DEC B
+  regs->b = 0x03;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }

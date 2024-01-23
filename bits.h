@@ -1,5 +1,12 @@
 #pragma once
 
+#include <assert.h>
+
+static inline uint8_t bit_n(uint8_t byte, uint8_t n) {
+  assert(n < 8);
+  return ((byte >> n) & 1);
+}
+
 static inline uint8_t bit_3(uint8_t byte) {
   return (byte & 0b00001000);
 }

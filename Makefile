@@ -28,6 +28,8 @@ test_soup: clean_build_logs $(test_source_files) $(header_files)
 test: test_soup
 	./test_soup $(soup_args)
 
+all: soup test_soup
+
 clean:
 	rm -f soup test_soup
 
