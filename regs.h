@@ -71,5 +71,7 @@ void regs_init(struct regs* regs);
 
 uint8_t* regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print);
 
-uint16_t* regs_get_ptr16(struct regs* regs, uint8_t regcode, bool print);
+uint16_t* regs_get_ptr16_qq(struct regs* regs, uint8_t regcode, bool print);
+
+uint16_t* regs_get_ptr16_ss(struct regs* regs, uint8_t regcode, bool print);
 

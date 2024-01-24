@@ -1,4 +1,5 @@
 #include "args.h"
+#include "bits.h"
 #include "dmg.h"
 #include "emulate.h"
 
@@ -128,8 +129,9 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // Addr_0007: loop
-  int iters = (0x9fff - 0x8000) + 1;
-  for (int i = 0; i < iters; i++) {
+  uint16_t iters = (0x9fff - 0x8000) + 1;
+  uint16_t i;
+  for (i = 0; i < iters; i++) {
     // LD (HL-),A
     mem[0x9fff - i] = 0;
     regs->hl--;
@@ -143,7 +145,7 @@ test_emulate_boot_rom(void** state) {
     regs->pc += 2;
     emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
-    // JR NZ, Addr_0007
+    // JR NZ,Addr_0007
     regs->pc += (i == iters - 1) ? 2 : -3;
     emulate_instruction_and_assert_dmg_equal(&expect, &actual);
   }
@@ -230,7 +232,7 @@ test_emulate_boot_rom(void** state) {
 
   // LD A,(DE)
   // "Nintendo" Character Data (0104H~0133H)
-  regs->a = mem[0x0104];
+  regs->a = 0xce;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
@@ -252,61 +254,103 @@ test_emulate_boot_rom(void** state) {
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
-  // Addr_00098
+  // Addr_00098: loop
+  // fast-forward to last iter
+  printf("--- [test] fast-forward begin ---\n");
+  for (i = 0; i < (3 * 8); i++)
+    emulate_instruction(&actual);
+  printf("--- [test] fast-forward end ---\n\n");
+  regs->a = 0x80;
+  regs->bc = 0x0170;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 1;
+  mem[0xfffb] = 0x02;
+  mem[0xfffa] = 0x38;
+  regs->pc = 0x0098;
+  assert_dmg_equal(&expect, &actual);
+
   // PUSH BC
-  mem[0xfffb] = 0x04;
-  mem[0xfffa] = 0xce;
+  mem[0xfffb] = 0x01;
+  mem[0xfffa] = 0x70;
   regs->sp = 0xfffa;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RL C
-  regs->c = 0x9c; // 0xce << 1
+  regs->c = 0xe0; // 0x70 << 1
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
-  flags->c = 1; // bit_7(0xce)
+  flags->c = 0;
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RLA
-  regs->a = 0x9c; // 0xce << 1
+  regs->a = 0x00; // 0x80 << 1
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
-  flags->c = 1; // bit_7(0xce)
+  flags->c = 1;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // POP BC
-  regs->bc = 0x04ce;
+  regs->bc = 0x0170;
   regs->sp = 0xfffc;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RL C
-  regs->c = 0x9c; // 0xce << 1
+  regs->c = 0xe0; // 0x70 << 1
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
-  flags->c = 1; // bit_7(0xce)
+  flags->c = 0;
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RLA
-  regs->a = 0x38; // 0x9c << 1
+  regs->a = 0x00; // 0x00 << 1
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
-  flags->c = 1; // bit_7(0x9c)
+  flags->c = 0;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // DEC B
-  regs->b = 0x03;
-  flags->z = 0;
+  regs->b = 0x00;
+  flags->z = 1;
   flags->n = 1;
   flags->h = 0;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // JR NZ,Addr_0098
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD (HL+),A
+  mem[0x8010] = 0x00;
+  regs->hl = 0x8011;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // INC HL
+  regs->hl = 0x8012;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD (HL+),A
+  mem[0x8012] = 0x00;
+  regs->hl = 0x8013;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // INC HL
+  regs->hl = 0x8014;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }

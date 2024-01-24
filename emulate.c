@@ -428,7 +428,8 @@ static void
 emulate_push(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode = bits_5_4(opcode);
   printf("PUSH ");
-  uint8_t* reg_ptr = (uint8_t*)regs_get_ptr16(regs, regcode, true /* print */);
+  uint8_t* reg_ptr =
+      (uint8_t*)regs_get_ptr16_qq(regs, regcode, true /* print */);
   printf("\n");
   // N.B. assumes little-endian
   uint8_t lo = reg_ptr[0];
@@ -442,7 +443,7 @@ static void
 emulate_pop(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode = bits_5_4(opcode);
   printf("POP ");
-  uint8_t* ptr = (uint8_t*)regs_get_ptr16(regs, regcode, true /* print */);
+  uint8_t* ptr = (uint8_t*)regs_get_ptr16_qq(regs, regcode, true /* print */);
   printf("\n");
   // N.B. assumes little-endian
   uint8_t lo = mem_read(mem, regs->sp);
@@ -463,6 +464,15 @@ emulate_dec(struct regs* regs, struct mem* mem, const struct op* op) {
   update_flags_post_op(regs, op, prev, *ptr);
 }
 
+static void
+emulate_inc16(struct regs* regs, uint8_t opcode) {
+  uint8_t regcode = bits_5_4(opcode);
+  printf("INC ");
+  uint16_t* ptr = regs_get_ptr16_ss(regs, regcode, true /* print */);
+  printf("\n");
+  (*ptr)++;
+}
+
 void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -478,6 +488,9 @@ emulate_instruction(struct dmg_system* dmg) {
   switch (opcode) {
   case 0x01: case 0x11: case 0x21: case 0x31:
     emulate_ld_r_d16(regs, rom, rom_size, opcode);
+    break;
+  case 0x03: case 0x13: case 0x23: case 0x33:
+    emulate_inc16(regs, opcode);
     break;
   case 0x05: case 0x0d: case 0x15: case 0x1d:
   case 0x25: case 0x2d: case 0x35: case 0x3d:

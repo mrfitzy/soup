@@ -68,8 +68,8 @@ regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print) {
   return ptr;
 }
 
-uint16_t*
-regs_get_ptr16(struct regs* regs, uint8_t regcode, bool print) {
+static uint16_t*
+get_ptr16(struct regs* regs, uint8_t regcode, bool print, bool qq) {
   uint16_t* ptr;
   char* reg_name;
   switch (regcode) {
@@ -86,8 +86,8 @@ regs_get_ptr16(struct regs* regs, uint8_t regcode, bool print) {
       reg_name = "HL";
       break;
     case 0b11:
-      ptr = &regs->af;
-      reg_name = "AF";
+      ptr = qq ? &regs->af : &regs->sp;
+      reg_name = qq ? "AF" : "SP";
       break;
     default:
       fprintf(stderr, "error: unknown regcode %x\n", regcode);
@@ -96,5 +96,15 @@ regs_get_ptr16(struct regs* regs, uint8_t regcode, bool print) {
   if (print)
     printf("%s", reg_name);
   return ptr;
+}
+
+uint16_t*
+regs_get_ptr16_qq(struct regs* regs, uint8_t regcode, bool print) {
+  return get_ptr16(regs, regcode, print, true);
+}
+
+uint16_t*
+regs_get_ptr16_ss(struct regs* regs, uint8_t regcode, bool print) {
+  return get_ptr16(regs, regcode, print, false);
 }
 
