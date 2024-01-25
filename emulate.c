@@ -410,8 +410,6 @@ emulate_call(
     struct mem* mem,
     const uint8_t* rom,
     size_t rom_size) {
-  (void)regs;
-  (void)mem;
   assert(rom_size > 2);
   uint8_t lo = rom[1];
   uint8_t hi = rom[2];
@@ -473,6 +471,13 @@ emulate_inc16(struct regs* regs, uint8_t opcode) {
   (*ptr)++;
 }
 
+static void
+emulate_ret(struct regs* regs, struct mem* mem) {
+  printf("RET\n");
+  regs->pc_lo = mem_read(mem, regs->sp++);
+  regs->pc_hi = mem_read(mem, regs->sp++);
+}
+
 void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -504,6 +509,10 @@ emulate_instruction(struct dmg_system* dmg) {
     break;
   case 0xc5: case 0xd5: case 0xe5: case 0xf5:
     emulate_push(regs, mem, opcode);
+    break;
+  case 0xc9:
+    emulate_ret(regs, mem);
+    pc_handled = true;
     break;
   case 0xcb:
     emulate_cb_instruction(regs, mem, rom, rom_size, cb_op);

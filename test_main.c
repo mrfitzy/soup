@@ -1,5 +1,6 @@
 #include "args.h"
 #include "bits.h"
+#include "diag.h"
 #include "dmg.h"
 #include "emulate.h"
 
@@ -88,15 +89,15 @@ emulate_instruction_and_assert_dmg_equal(
 }
 
 /**
- * af: 9c 22
- * bc: 03 9c
+ * af: 80 22
+ * bc: 01 70
  * de: 01 04
  * hl: 80 10
  * sp: ff fc
  * pc: 00 99
  *
  * z: 0
- * n: 0
+ * n: 1
  * h: 0
  * c: 1
  */
@@ -353,6 +354,78 @@ test_emulate_boot_rom(void** state) {
   regs->hl = 0x8014;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // RET
+  regs->sp = 0xfffe;
+  regs->pc = 0x002b;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // CALL $0096
+  mem[0xfffd] = 0x00;
+  mem[0xfffc] = 0x2e;
+  regs->sp = 0xfffc;
+  regs->pc = 0x0096;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD B,$04
+  regs->b = 0x04;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // Addr_00098: loop
+  // fast-forward past last iter
+  printf("--- [test] fast-forward begin ---\n");
+  for (i = 0; i < (4 * 8); i++)
+    emulate_instruction(&actual);
+  printf("--- [test] fast-forward end ---\n\n");
+  regs->bc = 0x0000;
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  mem[0xfffb] = 0x01;
+  mem[0xfffa] = 0x00;
+  regs->pc = 0x00a3;
+  assert_dmg_equal(&expect, &actual);
+
+  // LD (HL+),A
+  mem[0x8014] = 0x00;
+  regs->hl = 0x8015;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // INC HL
+  regs->hl = 0x8016;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD (HL+),A
+  mem[0x8016] = 0x00;
+  regs->hl = 0x8017;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // INC HL
+  regs->hl = 0x8018;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // RET
+  regs->sp = 0xfffe;
+  regs->pc = 0x002e;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // INC DE
+  regs->de = 0x0105;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD A,E
+  regs->a = 0x05;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // CP $34
 }
 
 int
