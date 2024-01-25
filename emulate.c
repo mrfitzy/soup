@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#define auto __auto_type
+
 static inline void
 regs_update_pc(struct regs* regs, const struct op* op) {
     regs->pc += op->length;
@@ -478,6 +480,20 @@ emulate_ret(struct regs* regs, struct mem* mem) {
   regs->pc_hi = mem_read(mem, regs->sp++);
 }
 
+static void
+emulate_cp_d8(struct regs* regs, const uint8_t* rom, size_t rom_size) {
+  assert(rom_size > 1);
+  auto flags = &regs->f;
+  uint8_t a = regs->a;
+  uint8_t b = rom[1];
+  printf("CP $%02x\n", b);
+  flags->z = ((a == b) ? 1 : 0);
+  flags->n = 1;
+  flags->h = ((nibble_lo(b) > nibble_lo(a)) ? 1 : 0);
+  flags->c = ((nibble_hi(b) > nibble_hi(a)) ? 1 : 0);
+  regs_mark_all_flags_dirty(regs);
+}
+
 void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -520,6 +536,9 @@ emulate_instruction(struct dmg_system* dmg) {
   case 0xcd:
     emulate_call(regs, mem, rom, rom_size);
     pc_handled = true;
+    break;
+  case 0xfe:
+    emulate_cp_d8(regs, rom, rom_size);
     break;
   default:
     handled = false;

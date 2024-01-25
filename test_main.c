@@ -426,6 +426,12 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // CP $34
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 1;
+  regs-> pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
 
 int

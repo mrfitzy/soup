@@ -2,6 +2,14 @@
 
 #include <assert.h>
 
+static inline uint8_t nibble_hi(uint8_t byte) {
+  return (byte >> 4);
+}
+
+static inline uint8_t nibble_lo(uint8_t byte) {
+  return (byte & 0x0f);
+}
+
 static inline uint8_t bit_n(uint8_t byte, uint8_t n) {
   assert(n < 8);
   return ((byte >> n) & 1);
