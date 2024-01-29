@@ -11,18 +11,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define NUM_FRAMES (16)
-
 void
 print_backtrace(void) {
-  void* callstack[NUM_FRAMES];
-  int n = backtrace(callstack, NUM_FRAMES);
-  char** strs = backtrace_symbols(callstack, n);
-  printf("\n");
-  for (int i = 0; i < n; i++) {
+  void* callstack[16];
+  int frames = backtrace(callstack, 16);
+  char** strs = backtrace_symbols(callstack, frames);
+  printf("---backtrace begin---\n");
+  for (int i = 0; i < frames; i++) {
     printf("%s\n", strs[i]);
   }
   free(strs);
+  printf("---backtrace end---\n");
 }
 
 void
@@ -32,8 +31,6 @@ print_data(const uint8_t* data, size_t length) {
     printf("%c%02X", (((i % 16 == 0) && (i != 0)) ? '\n' : ' '), data[i]);
   printf("\n");
 }
-
-_Static_assert(sizeof(size_t) == 8, "uhoh");
 
 typedef uint64_t half_row_size_t;
 
@@ -96,10 +93,10 @@ print_op(const struct op* op) {
 void
 print_regs(const struct regs* regs) {
   const struct flags* f = &regs->f;
-  printf("AF: %04x A: %02x F: %02x\n", regs->af, regs->a, f->val);
-  printf("BC: %04x B: %02x C: %02x\n", regs->bc, regs->b, regs->c);
-  printf("DE: %04x D: %02x E: %02x\n", regs->de, regs->d, regs->e);
-  printf("HL: %04x H: %02x L: %02x\n", regs->hl, regs->h, regs->l);
+  printf("AF: %04x\n", regs->af);
+  printf("BC: %04x\n", regs->bc);
+  printf("DE: %04x\n", regs->de);
+  printf("HL: %04x\n", regs->hl);
   printf("PC: %04x\n", regs->pc);
   printf("SP: %04x\n", regs->sp);
   printf("z:%d n:%d h:%d c:%d (%x)\n", f->z, f->n, f->h, f->c, f->val);

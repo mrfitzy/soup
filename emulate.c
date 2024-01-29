@@ -218,6 +218,14 @@ emulate_bit(struct regs* regs, struct mem* mem, const struct op* op) {
 }
 
 static void
+regs_update_n(struct regs* regs, bool set) {
+  assert(!regs->dirty_flags.n);
+  printf("  updating flag n from %x to %x (manually)\n", regs->f.n, set);
+  regs->f.n = set ? 1 : 0;
+  regs->dirty_flags.n = 1;
+}
+
+static void
 regs_update_cy(struct regs* regs, bool set) {
   assert(!regs->dirty_flags.c);
   printf("  updating flag c from %x to %x (manually)\n", regs->f.c, set);
@@ -238,7 +246,7 @@ emulate_rl(
   uint8_t* ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   uint8_t prev = *ptr;
   printf("\n");
-  *ptr <<= 1;
+  *ptr = ((*ptr << 1) | regs->f.c);
   regs_update_cy(regs, bit_7(prev));
   update_flags_post_op(regs, op, prev, *ptr);
 }
@@ -461,6 +469,7 @@ emulate_dec(struct regs* regs, struct mem* mem, const struct op* op) {
   uint8_t prev = *ptr;
   printf("\n");
   (*ptr)--;
+  regs_update_n(regs, 1);
   update_flags_post_op(regs, op, prev, *ptr);
 }
 

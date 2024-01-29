@@ -3,17 +3,12 @@
 #include "diag.h"
 #include "dmg.h"
 #include "emulate.h"
+#include "test.h"
+#include "test_shims.h"
 
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/mman.h>
-
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <setjmp.h>
-#include <stdint.h>
-#include <cmocka.h>
 
 static const void*
 map_file(const char* path, size_t size) {
@@ -36,37 +31,94 @@ assert_mem_equal(const struct mem* a, const struct mem* b) {
   assert_memory_equal(a->mem, b->mem, a->size);
 }
 
+static inline void
+assert_flag_z_equal(uint8_t a, uint8_t b) {
+  assert_int_equal(a, b);
+}
+
+static inline void
+assert_flag_n_equal(uint8_t a, uint8_t b) {
+  assert_int_equal(a, b);
+}
+
+static inline void
+assert_flag_h_equal(uint8_t a, uint8_t b) {
+  assert_int_equal(a, b);
+}
+
+static inline void
+assert_flag_cy_equal(uint8_t a, uint8_t b) {
+  assert_int_equal(a, b);
+}
+
 static void
 assert_flags_equal(const struct flags* a, const struct flags* b) {
-  int a_z = a->z;
-  int b_z = b->z;
-  assert_int_equal(a_z, b_z);
-  int a_n = a->n;
-  int b_n = b->n;
-  assert_int_equal(a_n, b_n);
-  int a_h = a->h;
-  int b_h = b->h;
-  assert_int_equal(a_h, b_h);
-  int a_c = a->c;
-  int b_c = b->c;
-  assert_int_equal(a_c, b_c);
+  assert_flag_z_equal(a->z, b->z);
+  assert_flag_n_equal(a->n, b->n);
+  assert_flag_h_equal(a->h, b->h);
+  assert_flag_cy_equal(a->c, b->c);
   int a_unused = a->unused;
   int b_unused = b->unused;
   assert_int_equal(a_unused, b_unused);
 }
 
+static inline void
+assert_a_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->a, &b->a, 1);
+}
+
+static inline void
+assert_b_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->b, &b->b, 1);
+}
+
+static inline void
+assert_c_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->c, &b->c, 1);
+}
+
+static inline void
+assert_d_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->d, &b->d, 1);
+}
+
+static inline void
+assert_e_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->e, &b->e, 1);
+}
+
+static inline void
+assert_h_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->h, &b->h, 1);
+}
+
+static inline void
+assert_l_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->l, &b->l, 1);
+}
+
+static inline void
+assert_sp_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->sp, &b->sp, 2);
+}
+
+static inline void
+assert_pc_equal(const struct regs* a, const struct regs* b) {
+  assert_memory_equal(&a->pc, &b->pc, 2);
+}
+
 static void
 assert_regs_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->a, &b->a, 1);
+  assert_a_equal(a, b);
+  assert_b_equal(a, b);
+  assert_c_equal(a, b);
+  assert_d_equal(a, b);
+  assert_e_equal(a, b);
+  assert_h_equal(a, b);
+  assert_l_equal(a, b);
+  assert_sp_equal(a, b);
+  assert_pc_equal(a, b);
   assert_flags_equal(&a->f, &b->f);
-  assert_memory_equal(&a->b, &b->b, 1);
-  assert_memory_equal(&a->c, &b->c, 1);
-  assert_memory_equal(&a->d, &b->d, 1);
-  assert_memory_equal(&a->e, &b->e, 1);
-  assert_memory_equal(&a->h, &b->h, 1);
-  assert_memory_equal(&a->l, &b->l, 1);
-  assert_memory_equal(&a->sp, &b->sp, 2);
-  assert_memory_equal(&a->pc, &b->pc, 2);
   assert_memory_equal(a, b, sizeof(struct regs));
 }
 
@@ -256,40 +308,24 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // Addr_00098: loop
-  // fast-forward to last iter
-  printf("--- [test] fast-forward begin ---\n");
-  for (i = 0; i < (3 * 8); i++)
-    emulate_instruction(&actual);
-  printf("--- [test] fast-forward end ---\n\n");
-  regs->a = 0x80;
-  regs->bc = 0x0170;
-  flags->z = 0;
-  flags->n = 1;
-  flags->h = 0;
-  flags->c = 1;
-  mem[0xfffb] = 0x02;
-  mem[0xfffa] = 0x38;
-  regs->pc = 0x0098;
-  assert_dmg_equal(&expect, &actual);
-
   // PUSH BC
-  mem[0xfffb] = 0x01;
-  mem[0xfffa] = 0x70;
+  mem[0xfffb] = 0x04;
+  mem[0xfffa] = 0xce;
   regs->sp = 0xfffa;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RL C
-  regs->c = 0xe0; // 0x70 << 1
+  regs->c = 0x9c;
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
-  flags->c = 0;
+  flags->c = 1;
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RLA
-  regs->a = 0x00; // 0x80 << 1
+  regs->a = 0x9d;
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
@@ -298,43 +334,54 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // POP BC
-  regs->bc = 0x0170;
+  regs->bc = 0x04ce;
   regs->sp = 0xfffc;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RL C
-  regs->c = 0xe0; // 0x70 << 1
+  regs->c = 0x9d;
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
-  flags->c = 0;
+  flags->c = 1;
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // RLA
-  regs->a = 0x00; // 0x00 << 1
+  regs->a = 0x3b;
   flags->z = 0;
   flags->n = 0;
   flags->h = 0;
-  flags->c = 0;
+  flags->c = 1;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // DEC B
-  regs->b = 0x00;
-  flags->z = 1;
+  regs->b = 0x03;
+  flags->z = 0;
   flags->n = 1;
   flags->h = 0;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // JR NZ,Addr_0098
-  regs->pc += 2;
+  regs->pc = 0x0098;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
+  for (int i = 0; i < 8 * 3; i++)
+    emulate_instruction(&actual);
+  regs->a = 0xf0;
+  regs->bc = 0x00eb;
+  flags->z = 1;
+  flags->c = 0;
+  mem[0xfffb] = 0x01;
+  mem[0xfffa] = 0x75;
+  regs->pc = 0x00a3;
+  assert_dmg_equal(&expect, &actual);
+
   // LD (HL+),A
-  mem[0x8010] = 0x00;
+  mem[0x8010] = 0xf0;
   regs->hl = 0x8011;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
@@ -345,7 +392,7 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // LD (HL+),A
-  mem[0x8012] = 0x00;
+  mem[0x8012] = 0xf0;
   regs->hl = 0x8013;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
@@ -378,18 +425,19 @@ test_emulate_boot_rom(void** state) {
   for (i = 0; i < (4 * 8); i++)
     emulate_instruction(&actual);
   printf("--- [test] fast-forward end ---\n\n");
-  regs->bc = 0x0000;
+  regs->a = 0xfc;
+  regs->bc = 0x00bc;
   flags->z = 1;
   flags->n = 1;
   flags->h = 0;
   flags->c = 0;
   mem[0xfffb] = 0x01;
-  mem[0xfffa] = 0x00;
+  mem[0xfffa] = 0x5e;
   regs->pc = 0x00a3;
   assert_dmg_equal(&expect, &actual);
 
   // LD (HL+),A
-  mem[0x8014] = 0x00;
+  mem[0x8014] = 0xfc;
   regs->hl = 0x8015;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
@@ -400,7 +448,7 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
   // LD (HL+),A
-  mem[0x8016] = 0x00;
+  mem[0x8016] = 0xfc;
   regs->hl = 0x8017;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
@@ -446,8 +494,5 @@ main(int argc, char** argv) {
   g_ops = map_file(args.ops_path, OPS_BIN_SIZE);
   g_cb_ops = map_file(args.cb_ops_path, OPS_BIN_SIZE);
   g_rom = map_file(args.rom_path, DMG_ROM_SIZE);
-  const struct CMUnitTest tests[] = {
-    cmocka_unit_test(test_emulate_boot_rom),
-  };
-  return cmocka_run_group_tests(tests, NULL, NULL);
+  return test_run(test_emulate_boot_rom);
 }
