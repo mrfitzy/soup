@@ -1,10 +1,10 @@
 main_c := main.c
-test_main_c := test_main.c
-main_files := $(main_c) $(test_main_c)
-source_files := $(filter-out $(main_files), $(wildcard *.c))
+test_sources := test_main.c test.c test_shims.c test_shims_proof.c
+other_files := $(main_c) $(test_sources)
+common_sources := $(filter-out $(other_files), $(wildcard *.c))
 header_files := $(wildcard *.h)
 
-soup_source_files := $(source_files) $(main_c)
+soup_source_files := $(common_sources) $(main_c)
 
 soup: clean_build_logs $(soup_source_files) $(header_files)
 	bash -c 'clang -g -Werror -Wall -Wextra -Wpadded -o soup $(soup_source_files) \
@@ -18,7 +18,7 @@ run: soup
 print: soup
 	./soup -p $(soup_args)
 
-test_source_files := $(source_files) $(test_main_c)
+test_source_files := $(common_sources) $(test_sources)
 
 test_soup: clean_build_logs $(test_source_files) $(header_files)
 	bash -c 'clang -g -Werror -Wall -Wextra -o test_soup $(test_source_files) \
