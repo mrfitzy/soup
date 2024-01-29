@@ -28,6 +28,9 @@ test_soup: clean_build_logs $(test_source_files) $(header_files)
 test: test_soup
 	./test_soup $(soup_args)
 
+test2: test_soup
+	./test.py ./test_soup $(soup_args)
+
 all: soup test_soup
 
 clean:
