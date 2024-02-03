@@ -539,6 +539,7 @@ test_emulate_boot_rom(void** state) {
 
     assert_dmg_equal(&expect, &actual);
   }
+  print_regs(&actual.regs);
 
   // LD DE,$00d8
   regs->de = 0x00d8;
@@ -555,6 +556,52 @@ test_emulate_boot_rom(void** state) {
   regs->a = 0x3c;
   regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // INC DE
+  regs->de = 0x00d9;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD (HL+),A
+  mem[0x8190] = 0x3c;
+  regs->hl = 0x8191;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // INC HL
+  regs->hl = 0x8192;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // DEC B
+  regs->b = 0x07;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 1;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // JR NZ,$0039
+  regs->pc = 0x0039;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // fast-forward through remaining iters
+  static const uint8_t video_data[] =
+      { 0x3c, 0x42, 0xb9, 0xa5, 0xb9, 0xa5, 0x42, 0x3c };
+  for (int i = 0; i < 7; i++) {
+    for (int j = 0; j < 6; j++)
+      emulate_instruction(&actual);
+    mem[0x8190 + (2 * (i + 1))] = video_data[i + 1];
+  }
+  regs->a = video_data[7];
+  regs->b = 0;
+  regs->de = 0xe0;
+  regs->hl = 0x81a0;
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  regs->pc = 0x0040;
+  assert_dmg_equal(&expect, &actual);
 }
 
 int
