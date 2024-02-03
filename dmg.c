@@ -17,6 +17,10 @@ dmg_init(
   dmg->cb_ops = cb_ops;
   dmg->rom = rom;
   dmg->rom_size = rom_size;
+
+  // TODO: rename rom -> boot_rom
+  assert(dmg->mem.size >= rom_size);
+  memcpy(dmg->mem.mem, rom, rom_size);
 }
 
 const struct op*

@@ -27,3 +27,5 @@ const struct op* dmg_get_op(
   const struct dmg_system* dmg,
   const struct op** cb_op_out);
 
+uint8_t dmg_get_logo(uint16_t offset);
+

@@ -40,3 +40,9 @@ mem_write(struct mem* mem, uint16_t addr, uint8_t data) {
   mem->mem[addr] = data;
 }
 
+uint8_t
+dmg_get_logo(uint16_t offset) {
+  assert(offset < sizeof(g_logo));
+  return g_logo[offset];
+}
+

@@ -10,6 +10,7 @@
             "name": "soup",
             "program": "${workspaceFolder}/soup",
             "args": ["ops.bin", "cb_ops.bin", "DMG_ROM.bin"],
+            "expressions": "native",
             "cwd": "${workspaceFolder}"
         },
         {
@@ -18,6 +19,7 @@
             "name": "test_soup",
             "program": "${workspaceFolder}/test_soup",
             "args": ["ops.bin", "cb_ops.bin", "DMG_ROM.bin"],
+            "expressions": "native",
             "cwd": "${workspaceFolder}"
         }
     ]

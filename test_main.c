@@ -140,6 +140,22 @@ emulate_instruction_and_assert_dmg_equal(
   assert_dmg_equal(expect, actual);
 }
 
+#define hi (true)
+#define lo (false)
+
+static uint8_t convert_logo(uint8_t logo, bool nibble) {
+  uint8_t bit = (nibble == hi) ? 7 : 3;
+  uint8_t val = 0;
+  for (int i = 0; i < 4; i++) {
+    val <<= 1;
+    val |= bit_n(logo, bit);
+    val <<= 1;
+    val |= bit_n(logo, bit);
+    bit--;
+  }
+  return val;
+}
+
 /**
  * af: 80 22
  * bc: 01 70
@@ -283,6 +299,7 @@ test_emulate_boot_rom(void** state) {
   regs->pc += 3;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 
+  // Addr_0027: loop
   // LD A,(DE)
   // "Nintendo" Character Data (0104H~0133H)
   regs->a = 0xce;
@@ -478,7 +495,65 @@ test_emulate_boot_rom(void** state) {
   flags->n = 1;
   flags->h = 0;
   flags->c = 1;
-  regs-> pc += 2;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // JR NZ, Addr_0027
+  regs->pc = 0x0027;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // smoke-test convert_logo
+  assert_int_equal(0xf0, convert_logo(0xce, hi));
+  assert_int_equal(0xfc, convert_logo(0xce, lo));
+  assert_int_equal(0xfc, convert_logo(0xed, hi));
+  assert_int_equal(0xf3, convert_logo(0xed, lo));
+
+  // fast-forward through remaining iters
+  // after iter n:
+  // mem[0x8010+8n], mem[0x8012+8n] = mem[0x0104+n]_77665544
+  // mem[0x8014+8n], mem[0x8016+8n] = mem[0x0104+n]_33221100
+  const int addr_0095_func = 2 + (4 * 8 /* addr_0098_loop */) + 5;
+  const int addr_0027_loop =
+      (2 + addr_0095_func + 1 + (addr_0095_func - 1) + 4);
+  const int n = 0x2f; // 0x0134 - 0x104 + 1 - 1
+  for (int i = 0; i < n; i++) {
+    printf("%04x\n", actual.regs.de);
+    for (int j = 0; j < addr_0027_loop; j++) {
+      emulate_instruction(&actual);
+    }
+
+    regs->de = (0x0104 + (i + 2));
+    regs->hl = (0x8018 + (8 * (i + 1)));
+    if (i == (n - 1))
+      regs->pc = 0x0034;
+    mem[0x8010 + (8 * (i + 1))] = convert_logo(dmg_get_logo(i + 1), hi);
+    mem[0x8012 + (8 * (i + 1))] = convert_logo(dmg_get_logo(i + 1), hi);
+    mem[0x8014 + (8 * (i + 1))] = convert_logo(dmg_get_logo(i + 1), lo);
+    mem[0x8016 + (8 * (i + 1))] = convert_logo(dmg_get_logo(i + 1), lo);
+
+    // not tested (loop/function local variables):
+    regs->af = actual.regs.af;
+    regs->bc = actual.regs.bc;
+    mem[0xfffb] = actual.mem.mem[0xfffb];
+    mem[0xfffa] = actual.mem.mem[0xfffa];
+
+    assert_dmg_equal(&expect, &actual);
+  }
+
+  // LD DE,$00d8
+  regs->de = 0x00d8;
+  regs->pc += 3;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD B,$08
+  regs->b = 0x08;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // Addr_0039: loop
+  // LD A,(DE)
+  regs->a = 0x3c;
+  regs->pc += 1;
   emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
 
