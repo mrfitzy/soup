@@ -602,6 +602,36 @@ test_emulate_boot_rom(void** state) {
   flags->h = 0;
   regs->pc = 0x0040;
   assert_dmg_equal(&expect, &actual);
+
+  // LD A,$19
+  regs->a = 0x19;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD ($9910),A
+  mem[0x9910] = 0x19;
+  regs->pc += 3;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // LD HL,$992f
+  regs->hl = 0x992f;
+  regs->pc += 3;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // Addr_0048
+  // LD C,$0c
+  regs->c = 0x0c;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
+
+  // Addr_004a
+  // DEC A
+  regs->a = 0x18;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(&expect, &actual);
 }
 
 int

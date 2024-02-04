@@ -503,6 +503,17 @@ emulate_cp_d8(struct regs* regs, const uint8_t* rom, size_t rom_size) {
   regs_mark_all_flags_dirty(regs);
 }
 
+static void
+emulate_ld_d16_a(
+    struct regs* regs,
+    struct mem* mem,
+    const uint8_t* rom,
+    size_t rom_size) {
+  assert(rom_size > 2);
+  uint16_t addr = ((rom[2] << 8) | rom[1]);
+  mem_write(mem, addr, regs->a);
+}
+
 void
 emulate_instruction(struct dmg_system* dmg) {
   const struct op* cb_op;
@@ -545,6 +556,9 @@ emulate_instruction(struct dmg_system* dmg) {
   case 0xcd:
     emulate_call(regs, mem, rom, rom_size);
     pc_handled = true;
+    break;
+  case 0xea:
+    emulate_ld_d16_a(regs, mem, rom, rom_size);
     break;
   case 0xfe:
     emulate_cp_d8(regs, rom, rom_size);
