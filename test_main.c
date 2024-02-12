@@ -5,6 +5,7 @@
 #include "emulate.h"
 #include "test.h"
 #include "test_shims.h"
+#include "ui.h"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -131,6 +132,7 @@ assert_dmg_equal(const struct dmg_system* a, const struct dmg_system* b) {
 static const struct op* g_ops;
 static const struct op* g_cb_ops;
 static const uint8_t* g_rom;
+static bool g_done = false;
 
 static void
 emulate_instruction_and_assert_dmg_equal(
@@ -656,6 +658,19 @@ test_emulate_boot_rom(void** state) {
 
   // fast-forward through remaining iters
   print_mem(&actual.mem);
+  print_regs(&actual.regs);
+}
+
+static int
+test_thread(void* data) {
+  const struct soup_args* args = data;
+  g_ops = map_file(args->ops_path, OPS_BIN_SIZE);
+  g_cb_ops = map_file(args->cb_ops_path, OPS_BIN_SIZE);
+  g_rom = map_file(args->rom_path, DMG_ROM_SIZE);
+  int rc = test_run(test_emulate_boot_rom);
+  getchar();
+  g_done = true;
+  return rc;
 }
 
 int
@@ -667,8 +682,7 @@ main(int argc, char** argv) {
     fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
     return 1;
   }
-  g_ops = map_file(args.ops_path, OPS_BIN_SIZE);
-  g_cb_ops = map_file(args.cb_ops_path, OPS_BIN_SIZE);
-  g_rom = map_file(args.rom_path, DMG_ROM_SIZE);
-  return test_run(test_emulate_boot_rom);
+
+  int rc = ui_run(test_thread, &args);
+  return rc;
 }
