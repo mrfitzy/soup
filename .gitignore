@@ -1,4 +1,6 @@
+*.o
 build.log
+build/
 errors.err
 imgui.ini
 out.txt
@@ -7,4 +9,4 @@ soup.dSYM
 test_run.log
 test_soup
 test_soup.dSYM
-*.o
+

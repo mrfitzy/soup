@@ -668,7 +668,6 @@ test_thread(void* data) {
   g_cb_ops = map_file(args->cb_ops_path, OPS_BIN_SIZE);
   g_rom = map_file(args->rom_path, DMG_ROM_SIZE);
   int rc = test_run(test_emulate_boot_rom);
-  getchar();
   g_done = true;
   return rc;
 }
