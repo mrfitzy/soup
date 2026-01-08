@@ -5,7 +5,7 @@
 #include "emulate.h"
 #include "test.h"
 #include "test_shims.h"
-#include "ui.h"
+#include "ui/ui.h"
 
 #include <fcntl.h>
 #include <stdio.h>

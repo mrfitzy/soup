@@ -63,7 +63,7 @@ def handle_line(line: str, backtrace: bool, log_file: IO[any]) -> bool:
 if __name__ == "__main__":
     # from https://web.archive.org/web/20240126174209/https://gist.github.com/JLeClerc/831d400763b7020599d9
     process = subprocess.Popen(sys.argv[1:], bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    with open('test_run.log', 'w+') as log_file:
+    with open('test/test_run.log', 'w+') as log_file:
         backtrace = False
         for line in iter(process.stdout.readline, b''):
             backtrace = handle_line(line.decode('utf-8')[:-1], backtrace, log_file)
