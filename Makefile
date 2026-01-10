@@ -8,7 +8,7 @@ OTHER   := $(MAIN_C)
 COMMON  := $(filter-out $(OTHER), $(wildcard src/*.c))
 SOURCES := $(COMMON) $(MAIN_C)
 
-CC := clang
+CC := zig cc
 
 CFLAGS := -g -Werror -Wall -Wextra -Wpadded
 
@@ -41,7 +41,7 @@ TEST_SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/
 
 SOURCES := $(COMMON) $(TEST_SOURCES)
 
-CXX := clang++
+CXX := zig c++
 
 CXXFLAGS := `pkg-config --cflags sdl3`
 CXXFLAGS += -I/usr/local/include -I/opt/local/include

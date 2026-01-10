@@ -127,7 +127,8 @@ emulate_ld_r_d16(struct regs* regs, const uint8_t* rom, size_t rom_size, uint8_t
   // 16-bit load immediate
   assert(rom_size > 0);
   uint8_t regcode = bits_5_4(opcode);
-  uint16_t val = *((uint16_t*)(rom + 1));
+  uint16_t val = *(++rom); // low byte
+  val |= (*(++rom) << 8); // high byte
   printf("LD ");
   if (regcode == 0b00) {
     regs->bc = val;
