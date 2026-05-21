@@ -8,7 +8,8 @@ OTHER   := $(MAIN_C)
 COMMON  := $(filter-out $(OTHER), $(wildcard src/*.c))
 SOURCES := $(COMMON) $(MAIN_C)
 
-ZIG := third-party/zig/zig
+TOOLCHAIN_ROOT := ../xchain/third-party
+ZIG := $(TOOLCHAIN_ROOT)/zig/zig
 
 CC := $(ZIG) cc
 
@@ -57,7 +58,7 @@ LIBS := -framework Metal -framework MetalKit -framework Cocoa -framework IOKit -
 LIBS += `pkg-config --libs sdl3`
 LIBS += -L/usr/local/lib -l cmocka
 
-CMOCKA_DIR := /opt/homebrew/Cellar/cmocka/1.1.7/include
+CMOCKA_DIR := $(TOOLCHAIN_ROOT)/cmocka/include
 
 $(OUT)/%.o:test/%.c
 	$(CC) $(CFLAGS) -c -Isrc/ -I./ -o $@ $<
