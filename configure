@@ -27,11 +27,29 @@ ULIMIT=$(ulimit -Sn)
 ulimit -Sn 4096 || print_error "Could not increase file descriptor limit, proceeding with current limit"
 
 print_msg "Building CMake, this may take a while..."
-CC="/Users/mike/xchain/third-party/zig/zig cc"
-CXX="/Users/mike/xchain/third-party/zig/zig c++"
+ZIG=/Users/mike/xchain/third-party/zig/zig
+CC="$ZIG cc"
+CXX="$ZIG c++"
 # see Source/kwsys/RegularExpression.cxx:1167
 CFLAGS="-O2 -fno-sanitize=pointer-overflow"
 CXXFLAGS="-O2 -fno-sanitize=pointer-overflow"
+
+# Route ar/ranlib through zig's bundled LLVM tools. GNU binutils' ranlib
+# produces a __.SYMDEF format that zig ld (LLD) rejects with
+# "unknown cpu architecture: 0".
+TOOLCHAIN_DIR="$(pwd)/build/toolchain"
+mkdir -p "$TOOLCHAIN_DIR"
+cat > "$TOOLCHAIN_DIR/ar" <<EOF
+#!/bin/bash
+exec $ZIG ar "\$@"
+EOF
+cat > "$TOOLCHAIN_DIR/ranlib" <<EOF
+#!/bin/bash
+exec $ZIG ranlib "\$@"
+EOF
+chmod +x "$TOOLCHAIN_DIR/ar" "$TOOLCHAIN_DIR/ranlib"
+export PATH="$TOOLCHAIN_DIR:$PATH"
+
 pushd $CMAKE_DIR > /dev/null
 #CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" ./bootstrap --parallel=$(sysctl -n hw.ncpu)
 CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" make
