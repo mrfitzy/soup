@@ -17,9 +17,9 @@ CMAKE_VERSION=4.2.1
 # cmake
 #
 CMAKE_DIR=third-party/cmake
-print_msg "Cloning CMake $CMAKE_VERSION to $CMAKE_DIR"
-rm -rf $CMAKE_DIR
-git clone --revision=v$CMAKE_VERSION https://gitlab.kitware.com/cmake/cmake.git third-party/cmake
+# print_msg "Cloning CMake $CMAKE_VERSION to $CMAKE_DIR"
+# rm -rf $CMAKE_DIR
+# git clone --revision=v$CMAKE_VERSION https://gitlab.kitware.com/cmake/cmake.git third-party/cmake
 
 # avoid ProcessFdQuotaExceeded errors
 # https://github.com/ziglang/zig/issues/23273
@@ -27,19 +27,19 @@ ULIMIT=$(ulimit -Sn)
 ulimit -Sn 4096 || print_error "Could not increase file descriptor limit, proceeding with current limit"
 
 print_msg "Building CMake, this may take a while..."
-CC="zig cc"
-CXX="zig c++"
-CFLAGS="-O2"
-CXXFLAGS="-O2"
-# CC=clang CXX=clang++ third-party/cmake/bootstrap --parallel=$(sysctl -n hw.ncpu) --prefix="$(pwd)/third-party/cmake/install"
+CC="/Users/mike/xchain/third-party/zig/zig cc"
+CXX="/Users/mike/xchain/third-party/zig/zig c++"
+# see Source/kwsys/RegularExpression.cxx:1167
+CFLAGS="-O2 -fno-sanitize=pointer-overflow"
+CXXFLAGS="-O2 -fno-sanitize=pointer-overflow"
 pushd $CMAKE_DIR > /dev/null
-CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" ./configure
-# CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" make
+#CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" ./bootstrap --parallel=$(sysctl -n hw.ncpu)
+CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" make
 popd > /dev/null
 
-ulimit -Sn $ULIMIT > /dev/null
+# TODO build cmocka
 
 print_msg "Cleaning up"
-rm -rf "$TEMP_DIR"
+ulimit -Sn $ULIMIT > /dev/null
 
 echo "[✔] Setup complete."
