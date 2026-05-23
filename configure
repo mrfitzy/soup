@@ -50,8 +50,16 @@ EOF
 chmod +x "$TOOLCHAIN_DIR/ar" "$TOOLCHAIN_DIR/ranlib"
 export PATH="$TOOLCHAIN_DIR:$PATH"
 
+# zig cc ignores -bundle and falls through to executable-mode linking
+# (-e _main), which fails for MODULE library targets. Override cmake's
+# Darwin defaults to use -dynamiclib instead (still dlopen-able).
+cat > "$TOOLCHAIN_DIR/overrides.cmake" <<'EOF'
+set(CMAKE_SHARED_MODULE_CREATE_C_FLAGS "-dynamiclib -Wl,-headerpad_max_install_names")
+set(CMAKE_SHARED_MODULE_CREATE_CXX_FLAGS "-dynamiclib -Wl,-headerpad_max_install_names")
+EOF
+
 pushd $CMAKE_DIR > /dev/null
-#CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" ./bootstrap --parallel=$(sysctl -n hw.ncpu)
+CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" ./bootstrap --init="$TOOLCHAIN_DIR/overrides.cmake" --parallel=$(sysctl -n hw.ncpu) && ./Bootstrap.cmk/cmake -DCMAKE_USER_MAKE_RULES_OVERRIDE="$TOOLCHAIN_DIR/overrides.cmake" . > /dev/null
 CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" make
 popd > /dev/null
 
