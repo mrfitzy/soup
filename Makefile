@@ -8,8 +8,8 @@ OTHER   := $(MAIN_C)
 COMMON  := $(filter-out $(OTHER), $(wildcard src/*.c))
 SOURCES := $(COMMON) $(MAIN_C)
 
-TOOLCHAIN_ROOT := ../xchain/third-party
-ZIG := $(TOOLCHAIN_ROOT)/zig/zig
+XCHAIN := ../xchain/third-party
+ZIG := $(XCHAIN)/zig/zig
 
 CC := $(ZIG) cc
 
@@ -56,9 +56,9 @@ OBJS := $(addprefix $(OUT)/, $(OBJS))
 
 LIBS := -framework Metal -framework MetalKit -framework Cocoa -framework IOKit -framework CoreVideo -framework QuartzCore
 LIBS += `pkg-config --libs sdl3`
-LIBS += -L/usr/local/lib -l cmocka
+LIBS += -L$(XCHAIN)/cmocka/build/src -l cmocka
 
-CMOCKA_DIR := $(TOOLCHAIN_ROOT)/cmocka/include
+CMOCKA_DIR := $(XCHAIN)/cmocka/include
 
 $(OUT)/%.o:test/%.c
 	$(CC) $(CFLAGS) -c -Isrc/ -I./ -o $@ $<
