@@ -11,61 +11,7 @@ print_error() {
 }
 
 # versions
-CMAKE_VERSION=4.2.1
-
-#
-# cmake
-#
-CMAKE_DIR=third-party/cmake
-# print_msg "Cloning CMake $CMAKE_VERSION to $CMAKE_DIR"
-# rm -rf $CMAKE_DIR
-# git clone --revision=v$CMAKE_VERSION https://gitlab.kitware.com/cmake/cmake.git third-party/cmake
-
-# avoid ProcessFdQuotaExceeded errors
-# https://github.com/ziglang/zig/issues/23273
-ULIMIT=$(ulimit -Sn)
-ulimit -Sn 4096 || print_error "Could not increase file descriptor limit, proceeding with current limit"
-
-print_msg "Building CMake, this may take a while..."
-ZIG=/Users/mike/xchain/third-party/zig/zig
-CC="$ZIG cc"
-CXX="$ZIG c++"
-# see Source/kwsys/RegularExpression.cxx:1167
-CFLAGS="-O2 -fno-sanitize=pointer-overflow"
-CXXFLAGS="-O2 -fno-sanitize=pointer-overflow"
-
-# Route ar/ranlib through zig's bundled LLVM tools. GNU binutils' ranlib
-# produces a __.SYMDEF format that zig ld (LLD) rejects with
-# "unknown cpu architecture: 0".
-TOOLCHAIN_DIR="$(pwd)/build/toolchain"
-mkdir -p "$TOOLCHAIN_DIR"
-cat > "$TOOLCHAIN_DIR/ar" <<EOF
-#!/bin/bash
-exec $ZIG ar "\$@"
-EOF
-cat > "$TOOLCHAIN_DIR/ranlib" <<EOF
-#!/bin/bash
-exec $ZIG ranlib "\$@"
-EOF
-chmod +x "$TOOLCHAIN_DIR/ar" "$TOOLCHAIN_DIR/ranlib"
-export PATH="$TOOLCHAIN_DIR:$PATH"
-
-# zig cc ignores -bundle and falls through to executable-mode linking
-# (-e _main), which fails for MODULE library targets. Override cmake's
-# Darwin defaults to use -dynamiclib instead (still dlopen-able).
-cat > "$TOOLCHAIN_DIR/overrides.cmake" <<'EOF'
-set(CMAKE_SHARED_MODULE_CREATE_C_FLAGS "-dynamiclib -Wl,-headerpad_max_install_names")
-set(CMAKE_SHARED_MODULE_CREATE_CXX_FLAGS "-dynamiclib -Wl,-headerpad_max_install_names")
-EOF
-
-pushd $CMAKE_DIR > /dev/null
-CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" ./bootstrap --init="$TOOLCHAIN_DIR/overrides.cmake" --parallel=$(sysctl -n hw.ncpu) && ./Bootstrap.cmk/cmake -DCMAKE_USER_MAKE_RULES_OVERRIDE="$TOOLCHAIN_DIR/overrides.cmake" . > /dev/null
-CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" make
-popd > /dev/null
-
-# TODO build cmocka
-
-print_msg "Cleaning up"
-ulimit -Sn $ULIMIT > /dev/null
+# TODO clone and configure xchain
+# https://github.com/mrfitzy/xchain
 
 echo "[✔] Setup complete."
