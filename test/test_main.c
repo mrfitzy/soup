@@ -4,10 +4,12 @@
 #include "dmg.h"
 #include "emulate.h"
 #include "test.h"
+#include "test_args.h"
 #include "test_shims.h"
 #include "ui/ui.h"
 
 #include <fcntl.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <sys/mman.h>
 
@@ -133,12 +135,23 @@ static const struct op* g_ops;
 static const struct op* g_cb_ops;
 static const uint8_t* g_rom;
 static bool g_done = false;
+static sem_t* g_sem = NULL;
+
+static void
+emulate_instruction_for_test(struct dmg_system* dmg) {
+  int rc = sem_wait(g_sem);
+  if (rc != 0) {
+    perror("sem_wait");
+  }
+  assert_int_equal(rc, 0);
+  emulate_instruction(dmg);
+}
 
 static void
 emulate_instruction_and_assert_dmg_equal(
     const struct dmg_system* expect,
     struct dmg_system* actual) {
-  emulate_instruction(actual);
+  emulate_instruction_for_test(actual);
   assert_dmg_equal(expect, actual);
 }
 
@@ -173,9 +186,11 @@ static uint8_t convert_logo(uint8_t logo, bool nibble) {
  */
 static void
 test_emulate_boot_rom(void** state) {
-  (void)state;
-  struct dmg_system* actual = (struct dmg_system*)(*state);
+  struct test_args* test_args = (struct test_args*)(*state);
+
+  struct dmg_system* actual = &test_args->dmg;
   dmg_init(actual, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
+
   struct dmg_system e;
   struct dmg_system* expect = &e;
   dmg_init(expect, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
@@ -390,7 +405,7 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
   for (int i = 0; i < 8 * 3; i++)
-    emulate_instruction(actual);
+  emulate_instruction_for_test(actual);
   regs->a = 0xf0;
   regs->bc = 0x00eb;
   flags->z = 1;
@@ -443,7 +458,7 @@ test_emulate_boot_rom(void** state) {
   // fast-forward past last iter
   printf("--- [test] fast-forward begin ---\n");
   for (i = 0; i < (4 * 8); i++)
-    emulate_instruction(actual);
+    emulate_instruction_for_test(actual);
   printf("--- [test] fast-forward end ---\n\n");
   regs->a = 0xfc;
   regs->bc = 0x00bc;
@@ -522,7 +537,7 @@ test_emulate_boot_rom(void** state) {
   for (int i = 0; i < n; i++) {
     printf("%04x\n", actual->regs.de);
     for (int j = 0; j < addr_0027_loop; j++) {
-      emulate_instruction(actual);
+      emulate_instruction_for_test(actual);
     }
 
     regs->de = (0x0104 + (i + 2));
@@ -592,7 +607,7 @@ test_emulate_boot_rom(void** state) {
   const uint8_t video_data[] = { 0x3c,0x42,0xb9,0xa5,0xb9,0xa5,0x42,0x3c };
   for (int i = 0; i < 7; i++) {
     for (int j = 0; j < 6; j++)
-      emulate_instruction(actual);
+      emulate_instruction_for_test(actual);
     mem[0x8190 + (2 * (i + 1))] = video_data[i + 1];
   }
   regs->a = video_data[7];
@@ -664,11 +679,18 @@ test_emulate_boot_rom(void** state) {
 
 static int
 test_thread(void* data) {
-  const struct soup_args* args = data;
-  g_ops = map_file(args->ops_path, OPS_BIN_SIZE);
-  g_cb_ops = map_file(args->cb_ops_path, OPS_BIN_SIZE);
-  g_rom = map_file(args->rom_path, DMG_ROM_SIZE);
-  int rc = test_run(test_emulate_boot_rom, (void**)(&args->dmg));
+  struct test_args* test_args = data;
+  const struct soup_args* soup_args = &test_args->soup_args;
+  test_args->sem = sem_open("soup", O_CREAT, 0600, 0 /* value */);
+  if (test_args->sem == SEM_FAILED) {
+    perror("sem_open");
+    return 1;
+  }
+  g_sem = test_args->sem;
+  g_ops = map_file(soup_args->ops_path, OPS_BIN_SIZE);
+  g_cb_ops = map_file(soup_args->cb_ops_path, OPS_BIN_SIZE);
+  g_rom = map_file(soup_args->rom_path, DMG_ROM_SIZE);
+  int rc = test_run(test_emulate_boot_rom, (void**)data);
   g_done = true;
   return rc;
 }
@@ -677,8 +699,8 @@ int
 main(int argc, char** argv) {
   argc--;
   argv++;
-  struct soup_args args;
-  if (!soup_args_from_argv(argc, argv, &args)) {
+  struct test_args args;
+  if (!soup_args_from_argv(argc, argv, &args.soup_args)) {
     fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
     return 1;
   }

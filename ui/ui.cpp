@@ -1,7 +1,10 @@
 #include "ui.h"
 
 #include "dmg.h"
+#include "test_args.h"
+
 #include "imgui.h"
+#include <semaphore.h>
 
 static void
 draw_flags_window(const struct regs* regs) {
@@ -23,7 +26,8 @@ draw_flags_window(const struct regs* regs) {
 
 void
 ui_update(void* data) {
-    const struct dmg_system* dmg = (struct dmg_system*)data;
+    struct test_args* args = (struct test_args*)data;
+    const struct dmg_system* dmg = &args->dmg;
     const struct regs* regs = &dmg->regs;
 
     bool show_another_window = false;
@@ -31,10 +35,11 @@ ui_update(void* data) {
     draw_flags_window(regs);
 
     {
-        ImGui::Begin("Another Window", &show_another_window);
+        ImGui::Begin("sem", &show_another_window);
         ImGui::Text("Hello from another window!");
-        if (ImGui::Button("Close Me"))
-            show_another_window = false;
+        if (ImGui::Button("step")) {
+            sem_post(args->sem);
+        }
         ImGui::End();
     }
 }

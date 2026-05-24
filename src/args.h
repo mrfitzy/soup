@@ -9,7 +9,6 @@
 #define DMG_ROM_SIZE (256)
 
 struct soup_args {
-  struct dmg_system dmg;
   const char* ops_path;
   const char* cb_ops_path;
   const char* rom_path;
