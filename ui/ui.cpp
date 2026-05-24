@@ -1,35 +1,37 @@
 #include "ui.h"
 
+#include "dmg.h"
 #include "imgui.h"
 
+static void
+draw_flags_window(const struct regs* regs) {
+    const struct flags* f = &regs->f;
+    bool flags_window_open = true;
+
+    ImGui::Begin("flags", &flags_window_open);
+
+    ImGui::Text("AF\t%04x", regs->af);
+    ImGui::Text("BC\t%04x", regs->bc);
+    ImGui::Text("DE\t%04x", regs->de);
+    ImGui::Text("HL\t%04x", regs->hl);
+    ImGui::Text("PC\t%04x", regs->pc);
+    ImGui::Text("SP\t%04x", regs->sp);
+    ImGui::Text("z:%d n:%d h:%d c:%d", f->z, f->n, f->h, f->c);
+
+    ImGui::End();
+}
+
 void
-ui_update(void) {
-    float clear_color[4] = { 0.45f, 0.55f, 0.60f, 1.00f };
+ui_update(void* data) {
+    const struct dmg_system* dmg = (struct dmg_system*)data;
+    const struct regs* regs = &dmg->regs;
+
     bool show_another_window = false;
 
-    // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-    {
-        static float f = 0.0f;
-        static int counter = 0;
-
-        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
-
-        ImGui::Text("wow such text");
-        ImGui::End();
-    }
+    draw_flags_window(regs);
 
     {
-        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+        ImGui::Begin("Another Window", &show_another_window);
         ImGui::Text("Hello from another window!");
         if (ImGui::Button("Close Me"))
             show_another_window = false;

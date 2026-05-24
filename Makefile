@@ -48,7 +48,7 @@ CXX := $(ZIG) c++
 
 CXXFLAGS := `pkg-config --cflags sdl3`
 CXXFLAGS += -I/usr/local/include -I/opt/local/include
-CXXFLAGS += -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+CXXFLAGS += -std=c++11 -Isrc -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -Wall -Wformat
 
 OBJS := $(addsuffix .o, $(basename $(notdir $(SOURCES))))
