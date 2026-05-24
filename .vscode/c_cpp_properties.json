@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/../xchain/third-party/cmocka/include",
+                "${workspaceFolder}/../imgui"
+            ],
+            "defines": [],
+            "compilerPath": "${workspaceFolder}/../xchain/third-party/zig/zig cc",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "macos-clang-arm64",
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}

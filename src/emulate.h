@@ -13,4 +13,3 @@ void emulate_rom(
     size_t rom_size);
 
 void emulate_instruction(struct dmg_system* dmg);
-
