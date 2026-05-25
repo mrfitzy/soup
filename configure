@@ -6,12 +6,36 @@ print_msg() {
     echo "[x] $1"
 }
 
+print_success() {
+    echo "[✔] $1"
+}
+
 print_error() {
     echo "[!] $1" >&2
 }
 
 # versions
-# TODO clone and configure xchain
-# https://github.com/mrfitzy/xchain
+
+XCHAIN_DIR="$HOME/xchain"
+
+# clone xchain
+if [ ! -d "$XCHAIN_DIR" ]; then
+    print_msg "Cloning xchain to $XCHAIN_DIR"
+    git clone https://github.com/mrfitzy/xchain.git $XCHAIN_DIR
+else
+    print_success "Found xchain at $XCHAIN_DIR"
+fi
+
+# configure xchain dependencies
+DEPS="zig cmake cmocka"
+for dep in $DEPS; do
+    if [[ ! -f "$XCHAIN_DIR/third-party/$dep/.configured" ]]; then
+        print_msg "Configuring $dep..."
+        (pushd $XCHAIN_DIR > /dev/null && ./configure && popd > /dev/null)
+    else
+        print_success "Already configured $dep"
+    fi
+done
 
 echo "[✔] Setup complete."
+
