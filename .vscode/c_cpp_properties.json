@@ -4,8 +4,10 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",
+                "${workspaceFolder}/../imgui",
                 "${workspaceFolder}/../xchain/third-party/cmocka/include",
-                "${workspaceFolder}/../imgui"
+                // XXX
+                "/opt/homebrew/Cellar/sdl3/3.4.8/include"
             ],
             "defines": [],
             "compilerPath": "${workspaceFolder}/../xchain/third-party/zig/zig cc",

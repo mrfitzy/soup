@@ -4,7 +4,7 @@
 #include "test_args.h"
 
 #include "imgui.h"
-#include <semaphore.h>
+#include <SDL3/SDL.h>
 
 static void
 draw_flags_window(const struct regs* regs) {
@@ -38,7 +38,7 @@ ui_update(void* data) {
         ImGui::Begin("sem", &show_another_window);
         ImGui::Text("Hello from another window!");
         if (ImGui::Button("step")) {
-            sem_post(args->sem);
+            SDL_SignalSemaphore(args->sem);
         }
         ImGui::End();
     }

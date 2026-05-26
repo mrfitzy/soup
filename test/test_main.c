@@ -3,6 +3,7 @@
 #include "diag.h"
 #include "dmg.h"
 #include "emulate.h"
+#include "signal_handler.h"
 #include "test.h"
 #include "test_args.h"
 #include "test_shims.h"
@@ -11,7 +12,9 @@
 #include <fcntl.h>
 #include <semaphore.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
+#include <SDL3/SDL.h>
 
 static const void*
 map_file(const char* path, size_t size) {
@@ -134,16 +137,16 @@ assert_dmg_equal(const struct dmg_system* a, const struct dmg_system* b) {
 static const struct op* g_ops;
 static const struct op* g_cb_ops;
 static const uint8_t* g_rom;
-static bool g_done = false;
-static sem_t* g_sem = NULL;
+static SDL_Semaphore* g_sem = NULL;
 
 static void
 emulate_instruction_for_test(struct dmg_system* dmg) {
-  int rc = sem_wait(g_sem);
-  if (rc != 0) {
-    perror("sem_wait");
+  while (!SDL_WaitSemaphoreTimeout(g_sem, 100 /* ms */)) {
+    if (signal_handler_should_quit()) {
+      fprintf(stderr, "signal received, quitting...\n");
+      exit(0);
+    }
   }
-  assert_int_equal(rc, 0);
   emulate_instruction(dmg);
 }
 
@@ -681,17 +684,11 @@ static int
 test_thread(void* data) {
   struct test_args* test_args = data;
   const struct soup_args* soup_args = &test_args->soup_args;
-  test_args->sem = sem_open("soup", O_CREAT, 0600, 0 /* value */);
-  if (test_args->sem == SEM_FAILED) {
-    perror("sem_open");
-    return 1;
-  }
   g_sem = test_args->sem;
   g_ops = map_file(soup_args->ops_path, OPS_BIN_SIZE);
   g_cb_ops = map_file(soup_args->cb_ops_path, OPS_BIN_SIZE);
   g_rom = map_file(soup_args->rom_path, DMG_ROM_SIZE);
   int rc = test_run(test_emulate_boot_rom, (void**)data);
-  g_done = true;
   return rc;
 }
 
@@ -704,6 +701,14 @@ main(int argc, char** argv) {
     fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
     return 1;
   }
+
+  args.sem = SDL_CreateSemaphore(0);
+  if (args.sem == NULL) {
+    fprintf(stderr, "error: SDL_CreateSemaphore failed: %s\n", SDL_GetError());
+    return 1;
+  }
+
+  signal_handler_run();
 
   int rc = ui_run(test_thread, &args);
   return rc;

@@ -3,9 +3,10 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_metal.h"
-#include <stdio.h>          // printf, fprintf
-#include <SDL3/SDL.h>
+#include "signal_handler.h"
 
+#include <stdio.h>
+#include <SDL3/SDL.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
 
@@ -105,10 +106,13 @@ ui_run(int (*work_fn)(void*), void* data) {
             while (SDL_PollEvent(&event))
             {
                 ImGui_ImplSDL3_ProcessEvent(&event);
-                if (event.type == SDL_EVENT_QUIT)
+                if (event.type == SDL_EVENT_QUIT) {
                     done = true;
-                if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
+                    signal_handler_quit();
+                }
+                if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window)) {
                     done = true;
+                }
             }
 
             // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppIterate() function]
