@@ -122,6 +122,81 @@ print_rom(
   }
 }
 
+static inline size_t
+rom_to_str_arg(
+    const struct op* op,
+    uint16_t ppc,
+    const uint8_t* pc,
+    size_t rom_size,
+    char* buf,
+    size_t buf_size,
+    const char** it) {
+  const char* iter = *it;
+  assert(rom_size >= op->length);
+  assert(iter[0] != 0); assert(iter[1] != 0);
+  // {d8, d16, a8, a16, r8}
+  size_t len = 0;
+  if ((iter[0] == 'd') && (iter[1] == '8')) {
+    len = snprintf(buf, buf_size, "$%02x", pc[1]);
+    *it += 2;
+  } else if ((iter[0] == 'd') && (iter[1] == '1')) {
+    assert(iter[2] == '6');
+    len = snprintf(buf, buf_size, "$%04x", ((uint16_t)pc[2] << 8) | pc[1]);
+    *it += 3;
+  } else if ((iter[0] == 'a') && (iter[1] == '8')) {
+    len = snprintf(buf, buf_size, "$ff00+$%02x", pc[1]);
+    *it += 2;
+  } else if ((iter[0] == 'a') && (iter[1] == '1')) {
+    assert(iter[2] == '6');
+    len = snprintf(buf, buf_size, "%04x", ((uint16_t)pc[2] << 8) | pc[1]);
+    *it += 3;
+  } else if ((iter[0] == 'r') && (iter[1] == '8')) {
+    len = snprintf(buf, buf_size, "%04x", ppc + (int8_t)(pc[1]) + 2);
+    *it += 2;
+  } else {
+    assert(false);
+  }
+  return len;
+}
+
+// @returns next pc for iterating rom; 0 for EOF
+uint16_t rom_to_str(
+    const struct op* ops,
+    const struct op* cb_ops,
+    uint16_t ppc,
+    const uint8_t* rom,
+    size_t rom_size,
+    char* buf,
+    size_t buf_size) {
+  const uint8_t* pc = rom + ppc;
+  if (pc >= rom + rom_size) {
+    return 0;
+  }
+  const uint8_t opcode = *pc;
+  const struct op* op = (opcode == 0xcb ? cb_ops + *(pc + 1) : ops + opcode);
+  if (op->length == 0) {
+    return 0;
+  }
+  assert(buf_size > 0);
+  // find and replace {d8, d16, a8, a16, r8} while copying
+  size_t len = 0, ilen = 0;
+  const char* iter = op->text;
+  while ((len < buf_size) && (*iter != 0)) {
+    if ((*iter == 'd') || (*iter == 'a') || (*iter == 'r')) {
+      ilen = rom_to_str_arg(op, ppc, pc, rom_size - (pc - rom), buf, buf_size - len, &iter);
+    } else {
+      *buf = *iter;
+      ilen = 1;
+      iter++;
+    }
+    buf += ilen;
+    len += ilen;
+  }
+  assert(len < buf_size);
+  *buf = 0;
+  return (ppc + op->length);
+}
+
 char
 flag_to_char(const struct op* op, char c) {
   uint8_t flag = op_get_flag(op, c);

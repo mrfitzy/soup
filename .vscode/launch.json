@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "soup",
             "program": "${workspaceFolder}/soup",
-            "args": ["ops.bin", "cb_ops.bin", "DMG_ROM.bin"],
+            "args": ["data/ops.bin", "data/cb_ops.bin", "data/DMG_ROM.bin"],
             "expressions": "native",
             "cwd": "${workspaceFolder}"
         },
@@ -18,7 +18,7 @@
             "request": "launch",
             "name": "test_soup",
             "program": "${workspaceFolder}/test_soup",
-            "args": ["ops.bin", "cb_ops.bin", "DMG_ROM.bin"],
+            "args": ["data/ops.bin", "data/cb_ops.bin", "data/DMG_ROM.bin"],
             "expressions": "native",
             "cwd": "${workspaceFolder}"
         }
