@@ -28,18 +28,30 @@ static void
 draw_code_window(const struct dmg_system* dmg) {
   bool code_window_open = true;
   ImGui::Begin("assembly", &code_window_open);
-  char buf[256];
-  uint16_t pc = dmg->regs.pc;
-  for (int i = 0; i < 10 && pc < dmg->rom_size; i++) {
-    uint16_t next_pc = rom_to_str(
-        dmg->ops, dmg->cb_ops, pc, dmg->rom, dmg->rom_size, buf, sizeof(buf));
-    if (next_pc == 0) {
-      break;
+  const ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
+  if (ImGui::BeginTable("code_table", 1 /* columns */, flags)) {
+    const float pad = ImGui::GetStyle().CellPadding.x * 2.0f;
+    const float width = ImGui::CalcTextSize("LDH A,($ff00+$ff)").x + pad;
+    const auto highlight = ImGui::GetColorU32(ImVec4(0.8f, 0.2f, 0.2f, 0.4f));
+
+    char buf[256];
+    uint16_t next_pc = 0;
+    for (uint16_t pc = 0; pc < dmg->rom_size; pc = next_pc) {
+      next_pc = rom_to_str(
+          dmg->ops, dmg->cb_ops, pc, dmg->rom, dmg->rom_size, buf, sizeof(buf));
+      if (next_pc == 0) {
+        break;
+      }
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      if (pc == dmg->regs.pc) {
+        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlight);
+      }
+      ImGui::Text("%s", buf);
+      ImGui::SameLine(width);
+      ImGui::Text("; %04x", pc);
     }
-    ImGui::Text("%s", buf);
-    ImGui::SameLine(100.0f);
-    ImGui::Text("; %04x", pc);
-    pc = next_pc;
+    ImGui::EndTable();
   }
   ImGui::End();
 }
