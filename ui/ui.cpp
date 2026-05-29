@@ -54,6 +54,55 @@ draw_control_window(SDL_Semaphore* sem) {
   ImGui::End();
 }
 
+static void
+draw_memory_window(const struct mem* mem) {
+  bool mem_window = true;
+  ImGui::Begin("memory", &mem_window);
+  const ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
+  ImVec2 pad = ImGui::GetStyle().CellPadding;
+  pad.x /= 2.0f;
+  ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, pad);
+  if (ImGui::BeginTable("memory_table", 17 /* columns */, flags)) {
+    // table column widths
+    const float pad = ImGui::GetStyle().CellPadding.x * 2.0f;
+    const float col0_w = ImGui::CalcTextSize("[mem]").x + pad;
+    const float coln_w = ImGui::CalcTextSize("FF").x + pad;
+
+    // headers row
+    ImGui::TableSetupColumn("[mem]", ImGuiTableColumnFlags_WidthFixed, col0_w);
+    char text_buf[16];
+    for (int i = 0; i < 16; i++) {
+      snprintf(text_buf, sizeof(text_buf), "%02X", i);
+      ImGui::TableSetupColumn(text_buf, ImGuiTableColumnFlags_WidthFixed, coln_w);
+    }
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableHeadersRow();
+
+    // data rows
+    uint8_t data_buf[16];
+    ImGuiListClipper clipper;
+    clipper.Begin(mem->size / sizeof(data_buf));
+    while (clipper.Step()) {
+      for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+        // data row
+        mem_copy_row(mem, row, data_buf, sizeof(data_buf));
+        ImGui::TableNextRow();
+        // data row header column
+        ImGui::TableNextColumn();
+        ImGui::Text("%04lX", row * sizeof(data_buf));
+        // data row data columns
+        for (size_t j = 0; j < sizeof(data_buf); j++) {
+          ImGui::TableNextColumn();
+          ImGui::Text("%02X", data_buf[j]);
+        }
+      }
+    }
+    ImGui::EndTable();
+  }
+  ImGui::PopStyleVar(); // ImGuiStyleVar_CellPadding
+  ImGui::End();
+}
+
 void
 ui_update(void* data) {
   struct test_args* args = (struct test_args*)data;
@@ -63,4 +112,5 @@ ui_update(void* data) {
   draw_regs_window(regs);
   draw_code_window(dmg);
   draw_control_window(args->sem);
+  draw_memory_window(&dmg->mem);
 }

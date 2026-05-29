@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void
 print_backtrace(void) {
@@ -72,6 +73,20 @@ void print_mem(const struct mem* mem) {
     }
     printf("\n");
   }
+}
+
+void
+mem_copy_row(const struct mem* mem, int row, uint8_t* buf, size_t buf_size) {
+  assert(row >= 0);
+  const size_t row_size = sizeof(half_row_size_t) * 2;
+  assert(mem->size % row_size == 0);
+  assert(buf_size >= row_size);
+  const size_t rows = mem->size / row_size;
+  if ((size_t)row >= rows) {
+    return;
+  }
+  const half_row_size_t* ptr = (const half_row_size_t*)mem->mem + (row * 2);
+  memcpy(buf, (const uint8_t*)ptr, row_size);
 }
 
 void
