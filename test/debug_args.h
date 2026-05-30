@@ -9,5 +9,6 @@ struct debug_args {
   struct dmg_system dmg;
   struct soup_args soup_args;
   SDL_Semaphore* sem;
+  bool step;
 };
 

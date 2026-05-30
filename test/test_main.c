@@ -137,11 +137,12 @@ assert_dmg_equal(const struct dmg_system* a, const struct dmg_system* b) {
 static const struct op* g_ops;
 static const struct op* g_cb_ops;
 static const uint8_t* g_rom;
-static SDL_Semaphore* g_sem = NULL;
+static struct debug_args* g_debug;
 
 static void
 emulate_instruction_for_test(struct dmg_system* dmg) {
-  while (!SDL_WaitSemaphoreTimeout(g_sem, 100 /* ms */)) {
+  while (g_debug->step &&
+      !SDL_WaitSemaphoreTimeout(g_debug->sem, 100 /* ms */)) {
     if (signal_handler_should_quit()) {
       fprintf(stderr, "signal received, quitting...\n");
       exit(0);
@@ -684,10 +685,10 @@ static int
 test_thread(void* data) {
   struct debug_args* debug_args = data;
   const struct soup_args* soup_args = &debug_args->soup_args;
-  g_sem = debug_args->sem;
   g_ops = map_file(soup_args->ops_path, OPS_BIN_SIZE);
   g_cb_ops = map_file(soup_args->cb_ops_path, OPS_BIN_SIZE);
   g_rom = map_file(soup_args->rom_path, DMG_ROM_SIZE);
+  g_debug = debug_args;
   int rc = test_run(test_emulate_boot_rom, (void**)data);
   return rc;
 }
@@ -707,6 +708,7 @@ main(int argc, char** argv) {
     fprintf(stderr, "error: SDL_CreateSemaphore failed: %s\n", SDL_GetError());
     return 1;
   }
+  args.step = true;
 
   signal_handler_run();
 

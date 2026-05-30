@@ -12,7 +12,6 @@ draw_regs_window(const struct regs* regs) {
     const struct flags* f = &regs->f;
     bool regs_window_open = true;
     ImGui::Begin("registers", &regs_window_open);
-
     ImGui::Text("AF\t%04x", regs->af);
     ImGui::Text("BC\t%04x", regs->bc);
     ImGui::Text("DE\t%04x", regs->de);
@@ -20,7 +19,6 @@ draw_regs_window(const struct regs* regs) {
     ImGui::Text("PC\t%04x", regs->pc);
     ImGui::Text("SP\t%04x", regs->sp);
     ImGui::Text("z:%d n:%d h:%d c:%d", f->z, f->n, f->h, f->c);
-
     ImGui::End();
 }
 
@@ -57,11 +55,16 @@ draw_code_window(const struct dmg_system* dmg) {
 }
 
 static void
-draw_control_window(SDL_Semaphore* sem) {
-  bool control_window = true;
-  ImGui::Begin("control", &control_window);
+draw_debug_window(struct debug_args* debug) {
+  bool debug_window = true;
+  ImGui::Begin("debug", &debug_window);
   if (ImGui::Button("step")) {
-    SDL_SignalSemaphore(sem);
+    debug->step = true;
+    SDL_SignalSemaphore(debug->sem);
+  }
+  if (ImGui::Button("continue")) {
+    debug->step = false;
+    SDL_SignalSemaphore(debug->sem);
   }
   ImGui::End();
 }
@@ -117,12 +120,13 @@ draw_memory_window(const struct mem* mem) {
 
 void
 ui_update(void* data) {
-  struct debug_args* args = (struct debug_args*)data;
-  const struct dmg_system* dmg = &args->dmg;
+  struct debug_args* debug = (struct debug_args*)data;
+  const struct dmg_system* dmg = &debug->dmg;
   const struct regs* regs = &dmg->regs;
 
   draw_regs_window(regs);
   draw_code_window(dmg);
-  draw_control_window(args->sem);
+  draw_debug_window(debug);
   draw_memory_window(&dmg->mem);
 }
+
