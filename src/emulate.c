@@ -612,7 +612,7 @@ post_op:
   }
   if (!pc_handled)
     regs_update_pc(regs, cb_op ? cb_op : op);
-  // fallback logic for flags uses A
+  // fallback logic for flags uses accumulator
   update_flags_post_op(regs, cb_op ? cb_op : op, prev_a, regs->a);
   regs_mark_all_flags_clean(regs);
   fflush(stderr);

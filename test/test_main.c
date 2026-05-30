@@ -676,9 +676,14 @@ test_emulate_boot_rom(void** state) {
   regs->pc = 0x004a;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  // fast-forward through remaining iters
-  print_mem(&actual->mem);
-  print_regs(&actual->regs);
+  printf("breaking at test end @ pc = %04x, "
+      "press continue to execute remaining...\n", actual->regs.pc);
+  g_debug->step = true;
+
+  // RESUME fast-forward through remaining iters
+  while (actual->regs.pc < DMG_ROM_SIZE) {
+    emulate_instruction_for_test(actual);
+  }
 }
 
 static int
