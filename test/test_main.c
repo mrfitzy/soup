@@ -5,7 +5,7 @@
 #include "emulate.h"
 #include "signal_handler.h"
 #include "test.h"
-#include "test_args.h"
+#include "debug_args.h"
 #include "test_shims.h"
 #include "ui/ui.h"
 
@@ -189,9 +189,9 @@ static uint8_t convert_logo(uint8_t logo, bool nibble) {
  */
 static void
 test_emulate_boot_rom(void** state) {
-  struct test_args* test_args = (struct test_args*)(*state);
+  struct debug_args* debug_args = (struct debug_args*)(*state);
 
-  struct dmg_system* actual = &test_args->dmg;
+  struct dmg_system* actual = &debug_args->dmg;
   dmg_init(actual, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
 
   struct dmg_system e;
@@ -682,9 +682,9 @@ test_emulate_boot_rom(void** state) {
 
 static int
 test_thread(void* data) {
-  struct test_args* test_args = data;
-  const struct soup_args* soup_args = &test_args->soup_args;
-  g_sem = test_args->sem;
+  struct debug_args* debug_args = data;
+  const struct soup_args* soup_args = &debug_args->soup_args;
+  g_sem = debug_args->sem;
   g_ops = map_file(soup_args->ops_path, OPS_BIN_SIZE);
   g_cb_ops = map_file(soup_args->cb_ops_path, OPS_BIN_SIZE);
   g_rom = map_file(soup_args->rom_path, DMG_ROM_SIZE);
@@ -696,7 +696,7 @@ int
 main(int argc, char** argv) {
   argc--;
   argv++;
-  struct test_args args;
+  struct debug_args args;
   if (!soup_args_from_argv(argc, argv, &args.soup_args)) {
     fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
     return 1;

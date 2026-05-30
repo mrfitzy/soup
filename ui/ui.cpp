@@ -1,8 +1,8 @@
 #include "ui.h"
 
+#include "debug_args.h"
 #include "diag.h"
 #include "dmg.h"
-#include "test_args.h"
 
 #include "imgui.h"
 #include <SDL3/SDL.h>
@@ -117,7 +117,7 @@ draw_memory_window(const struct mem* mem) {
 
 void
 ui_update(void* data) {
-  struct test_args* args = (struct test_args*)data;
+  struct debug_args* args = (struct debug_args*)data;
   const struct dmg_system* dmg = &args->dmg;
   const struct regs* regs = &dmg->regs;
 
