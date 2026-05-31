@@ -645,7 +645,7 @@ test_emulate_boot_rom(void** state) {
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  // Addr_004a: loop
+  // Addr_004a: inner loop
   // DEC A
   regs->a = 0x18;
   flags->z = 0;
@@ -676,8 +676,30 @@ test_emulate_boot_rom(void** state) {
   regs->pc = 0x004a;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  printf("breaking at test end @ pc = %04x, "
-      "press continue to execute remaining...\n", actual->regs.pc);
+  // skip through C-controlled loop from 004a-004f
+  for (int i = 0; i < 0x0b; i++) {
+    for (int j = 0; j < 5; j++) {
+      emulate_instruction_for_test(actual);
+    }
+    mem[0x992e - i] = 0x17 - i;
+  }
+  regs->a = 0xd;
+  regs->c = 0;
+  regs->hl = 0x9923;
+  regs->pc = 0x0051;
+  flags->z = 1;
+  assert_dmg_equal(expect, actual);
+
+  // LD L,$0f
+  regs->l = 0x0f;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR 0048
+  regs->pc = 0x0048;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  printf("breaking at test end @ pc = %04x...", actual->regs.pc);
   g_debug->step = true;
 
   // RESUME fast-forward through remaining iters
@@ -713,7 +735,7 @@ main(int argc, char** argv) {
     fprintf(stderr, "error: SDL_CreateSemaphore failed: %s\n", SDL_GetError());
     return 1;
   }
-  args.step = true;
+  args.step = false;
 
   signal_handler_run();
 

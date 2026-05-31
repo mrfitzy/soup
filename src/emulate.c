@@ -294,18 +294,28 @@ post_cb_op:
   }
 }
 
+static void
+emulate_jr(
+    struct regs* regs,
+    const uint8_t* rom,
+    size_t rom_size) {
+  assert(rom_size > 1);
+  printf("JR ");
+  int8_t jump_len = (int8_t)(rom[1]) + 2;
+  printf("$%04x\n", regs->pc + jump_len);
+  regs->pc += jump_len;
+}
+
 /**
  * 00 1cc 000: JR cc,r8
  *     ||
  *     condition
  */
 static void
-emulate_jr(
+emulate_jr_if(
     struct regs* regs,
-    struct mem* mem,
     const uint8_t* rom,
     size_t rom_size) {
-  (void)mem;
   assert(rom_size > 1);
   uint8_t opcode = rom[0];
   uint8_t condcode = bits_4_3(opcode);
@@ -541,6 +551,10 @@ emulate_instruction(struct dmg_system* dmg) {
   case 0x17: // short-circuit for RL A
     emulate_rl(regs, mem, op, false /* is_cb_op */);
     break;
+  case 0x18:
+    emulate_jr(regs, rom, rom_size);
+    pc_handled = true;
+    break;
   case 0xc1: case 0xd1: case 0xe1: case 0xf1:
     emulate_pop(regs, mem, opcode);
     break;
@@ -595,7 +609,7 @@ emulate_instruction(struct dmg_system* dmg) {
     emulate_xor_r(regs, mem, opcode);
   } else if ((opcode & 0b11100111) == 0b00100000) {
     // 0b001xx000
-    emulate_jr(regs, mem, rom, rom_size);
+    emulate_jr_if(regs, rom, rom_size);
     pc_handled = true;
   } else {
     handled = false;
