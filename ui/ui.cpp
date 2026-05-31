@@ -79,9 +79,18 @@ draw_debug_window(struct debug_args* debug) {
 }
 
 static void
-draw_memory_window(const struct mem* mem) {
+draw_memory_window(const struct mem* mem, const struct regs* regs) {
   bool mem_window = true;
   ImGui::Begin("memory", &mem_window);
+  bool jump = false;
+  static int s_jump_highlight = 0;
+  const uint16_t hl_row = regs->hl / 16;
+  if (ImGui::Button("HL")) {
+    jump = true;
+    s_jump_highlight = 60;
+  }
+
+  const auto highlight = ImGui::GetColorU32(ImVec4(0.8f, 0.2f, 0.2f, 0.4f));
   const ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
   ImVec2 pad = ImGui::GetStyle().CellPadding;
   pad.x /= 2.0f;
@@ -106,6 +115,9 @@ draw_memory_window(const struct mem* mem) {
     uint8_t data_buf[16];
     ImGuiListClipper clipper;
     clipper.Begin(mem->size / sizeof(data_buf));
+    if (jump) {
+      clipper.IncludeItemByIndex(hl_row);
+    }
     while (clipper.Step()) {
       for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
         // data row
@@ -113,6 +125,13 @@ draw_memory_window(const struct mem* mem) {
         ImGui::TableNextRow();
         // data row header column
         ImGui::TableNextColumn();
+        if (s_jump_highlight && (row == hl_row)) {
+          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlight);
+          s_jump_highlight--;
+        }
+        if (jump && (row == hl_row)) {
+          ImGui::SetScrollHereY(0.5f);
+        }
         ImGui::Text("%04lX", row * sizeof(data_buf));
         // data row data columns
         for (size_t j = 0; j < sizeof(data_buf); j++) {
@@ -149,7 +168,7 @@ ui_update(void* data) {
   draw_regs_window(regs);
   draw_code_window(dmg);
   draw_debug_window(debug);
-  draw_memory_window(&dmg->mem);
+  draw_memory_window(&dmg->mem, regs);
   draw_display_window(dmg);
 }
 
