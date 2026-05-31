@@ -1,5 +1,6 @@
 #include "ui.h"
 
+#include "bits.h"
 #include "debug_args.h"
 #include "diag.h"
 #include "dmg.h"
@@ -118,6 +119,19 @@ draw_memory_window(const struct mem* mem) {
   ImGui::End();
 }
 
+static void
+draw_display_window(const struct dmg_system* dmg) {
+  const uint8_t lcdc = mem_read(&dmg->mem, 0xff40);
+  bool display_window = true;
+  ImGui::Begin("display", &display_window);
+  ImGui::Text("lcd %s",        bit_7(lcdc) ? "on" : "off");
+  ImGui::Text("window %s",     bit_5(lcdc) ? "on" : "off");
+  ImGui::Text("bg tiles @ %s", bit_4(lcdc) ? "8000-8fff" : "8800-97ff");
+  ImGui::Text("bg map @ %s",   bit_3(lcdc) ? "9c00-9fff" : "9800-9bff");
+  ImGui::Text("bg %s",         bit_0(lcdc) ? "on" : "off");
+  ImGui::End();
+}
+
 void
 ui_update(void* data) {
   struct debug_args* debug = (struct debug_args*)data;
@@ -128,5 +142,6 @@ ui_update(void* data) {
   draw_code_window(dmg);
   draw_debug_window(debug);
   draw_memory_window(&dmg->mem);
+  draw_display_window(dmg);
 }
 

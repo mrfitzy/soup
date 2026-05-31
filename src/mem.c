@@ -31,7 +31,7 @@ mem_init(struct mem* mem, uint16_t max_addr) {
 }
 
 uint8_t
-mem_read(struct mem* mem, uint16_t addr) {
+mem_read(const struct mem* mem, uint16_t addr) {
   assert(addr < mem->size);
   return mem->mem[addr];
 }

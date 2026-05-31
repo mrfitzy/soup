@@ -15,12 +15,32 @@ static inline uint8_t bit_n(uint8_t byte, uint8_t n) {
   return ((byte >> n) & 1);
 }
 
+static inline uint8_t bit_0(uint8_t byte) {
+  return (byte & 0b00000001);
+}
+
+static inline uint8_t bit_1(uint8_t byte) {
+  return (byte & 0b00000010);
+}
+
+static inline uint8_t bit_2(uint8_t byte) {
+  return (byte & 0b00000100);
+}
+
 static inline uint8_t bit_3(uint8_t byte) {
   return (byte & 0b00001000);
 }
 
 static inline uint8_t bit_4(uint8_t byte) {
   return (byte & 0b00010000);
+}
+
+static inline uint8_t bit_5(uint8_t byte) {
+  return (byte & 0b00100000);
+}
+
+static inline uint8_t bit_6(uint8_t byte) {
+  return (byte & 0b01000000);
 }
 
 static inline uint8_t bit_7(uint8_t byte) {
