@@ -26,7 +26,11 @@ draw_regs_window(const struct regs* regs) {
 static void
 draw_code_window(const struct dmg_system* dmg) {
   bool code_window_open = true;
+  static bool s_center = false;
   ImGui::Begin("assembly", &code_window_open);
+  if (ImGui::Button("PC")) {
+    s_center = true;
+  }
   const ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
   if (ImGui::BeginTable("code_table", 1 /* columns */, flags)) {
     const float pad = ImGui::GetStyle().CellPadding.x * 2.0f;
@@ -45,6 +49,10 @@ draw_code_window(const struct dmg_system* dmg) {
       ImGui::TableNextColumn();
       if (pc == dmg->regs.pc) {
         ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlight);
+        if (s_center) {
+          ImGui::SetScrollHereY(0.5f);
+          s_center = false;
+        }
       }
       ImGui::Text("%s", buf);
       ImGui::SameLine(width);
