@@ -99,6 +99,16 @@ draw_memory_window(const struct mem* mem, const struct regs* regs) {
     jump_row = (bit_4(lcdc) ? 0x8fff : 0x97ff) / 16;
     s_jump_highlight = 60;
   }
+  ImGui::SameLine();
+  if (ImGui::Button("< bg map")) {
+    jump_row = (bit_3(lcdc) ? 0x9c00 : 0x9800) / 16;
+    s_jump_highlight = 60;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("bg map >")) {
+    jump_row = (bit_3(lcdc) ? 0x9fff : 0x9bff) / 16;
+    s_jump_highlight = 60;
+  }
 
   const auto highlight = ImGui::GetColorU32(ImVec4(0.8f, 0.2f, 0.2f, 0.4f));
   const ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
