@@ -7,13 +7,14 @@ extern "C" {
 #endif
 
 struct ImDrawList;
-typedef unsigned int ImU32;
+struct ImVec2;
 
 void draw_tile(
     const uint8_t* data,
     const float* palette,
-    struct ImDrawList* dl,
-    float dim);
+    const ImVec2& t0,
+    float dot_dim,
+    ImDrawList* dl);
 
 #ifdef __cplusplus
 } // extern "C"

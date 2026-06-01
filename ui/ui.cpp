@@ -223,8 +223,12 @@ draw_tiles_window(const struct mem* mem) {
       ImGui::Text("%X0", i); // header column
       for (int j = 0; j < 16; j++) {
         ImGui::TableNextColumn();
-        ImDrawList* dl = ImGui::GetWindowDrawList();
-        draw_tile(tile_data + (16 * (i*16 + j)), (const float*)g_palette, dl, 5.0f);
+        draw_tile(
+            tile_data + (16 * (i*16 + j)),
+            (const float*)g_palette,
+            ImGui::GetCursorScreenPos(),
+            5.0f,
+            ImGui::GetWindowDrawList());
       }
     }
     ImGui::EndTable();
@@ -238,30 +242,36 @@ draw_bg_window(const struct mem* mem) {
   const uint8_t lcdc = mem_read(mem, 0xff40);
   const uint8_t* bg_map = mem->mem + (bit_3(lcdc) ? 0x9c00 : 0x9800);
   const uint8_t* tile_data = mem->mem + (bit_4(lcdc) ? 0x8000 : 0x8800);
+  const uint8_t scy = mem_read(mem, 0xff42);
+  const uint8_t scx = mem_read(mem, 0xff43);
+
+  const float dot_dim = 3.0f;
+  const float tile_dim = dot_dim * 8.0f;
+  const float window_dim = tile_dim * 32.0f;
+
+  ImGui::SetNextWindowSize(ImVec2(window_dim, window_dim), ImGuiCond_Once);
   bool bg_window = true;
   ImGui::Begin("bg", &bg_window);
-  ImVec2 pad = ImGui::GetStyle().CellPadding;
-  pad.x = 1.0f;
-  pad.y = 1.0f;
-  ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, pad);
-  const auto flags = ImGuiTableFlags_BordersInnerH;
-  if (ImGui::BeginTable("bg_table", 32 /* columns */, flags)) {
-    const float dim = 3.0f;
-    for (int i = 0; i < 32; i++) {
-      ImGui::TableNextRow(ImGuiTableRowFlags_None, dim * 8.0f);
-      for (int j = 0; j < 32; j++) {
-        ImGui::TableNextColumn();
-        ImDrawList* dl = ImGui::GetWindowDrawList();
-        const uint8_t tile = bg_map[i*32 + j];
-        draw_tile(tile_data + (16 * tile), (const float*)g_palette, dl, dim);
-      }
+
+  // bg tiles
+  ImDrawList* dl = ImGui::GetWindowDrawList();
+  const ImVec2 w0 = ImGui::GetCursorScreenPos();
+  for (int i = 0; i < 32; i++) {
+    for (int j = 0; j < 32; j++) {
+      const uint8_t tile = bg_map[i*32 + j];
+      const auto t0 = ImVec2(w0.x + j*tile_dim, w0.y + i*tile_dim);
+      draw_tile(
+          tile_data + (16 * tile), (const float*)g_palette, t0, dot_dim, dl);
     }
-    ImGui::EndTable();
   }
-  ImGui::PopStyleVar(); // ImGuiStyleVar_CellPadding
+
+  // viewport rect
+  const auto v0 = ImVec2(w0.x + scx*dot_dim, w0.y + scy*dot_dim);
+  const auto v1 = ImVec2(v0.x + 160*dot_dim, v0.y + 144*dot_dim);
+  dl->AddRect(v0, v1, IM_COL32(230, 0, 18, 255), 0.0f, 0, dot_dim);
+
   ImGui::End();
 }
-
 
 void
 ui_update(void* data) {
