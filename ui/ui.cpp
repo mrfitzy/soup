@@ -82,11 +82,21 @@ static void
 draw_memory_window(const struct mem* mem, const struct regs* regs) {
   bool mem_window = true;
   ImGui::Begin("memory", &mem_window);
-  bool jump = false;
+  static uint16_t jump_row = 0;
   static int s_jump_highlight = 0;
-  const uint16_t hl_row = regs->hl / 16;
+  const uint8_t lcdc = mem_read(mem, 0xff40);
   if (ImGui::Button("HL")) {
-    jump = true;
+    jump_row = regs->hl / 16;
+    s_jump_highlight = 60;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("< bg tiles")) {
+    jump_row = (bit_4(lcdc) ? 0x8000 : 0x8800) / 16;
+    s_jump_highlight = 60;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("bg tiles >")) {
+    jump_row = (bit_4(lcdc) ? 0x8fff : 0x97ff) / 16;
     s_jump_highlight = 60;
   }
 
@@ -115,8 +125,8 @@ draw_memory_window(const struct mem* mem, const struct regs* regs) {
     uint8_t data_buf[16];
     ImGuiListClipper clipper;
     clipper.Begin(mem->size / sizeof(data_buf));
-    if (jump) {
-      clipper.IncludeItemByIndex(hl_row);
+    if (s_jump_highlight) {
+      clipper.IncludeItemByIndex(jump_row);
     }
     while (clipper.Step()) {
       for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
@@ -125,12 +135,14 @@ draw_memory_window(const struct mem* mem, const struct regs* regs) {
         ImGui::TableNextRow();
         // data row header column
         ImGui::TableNextColumn();
-        if (s_jump_highlight && (row == hl_row)) {
-          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlight);
-          s_jump_highlight--;
-        }
-        if (jump && (row == hl_row)) {
+        if ((s_jump_highlight == 60) && (row == jump_row)) {
           ImGui::SetScrollHereY(0.5f);
+        }
+        if (s_jump_highlight && (row == jump_row)) {
+          ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlight);
+          if (s_jump_highlight-- == 0) {
+            jump_row = 0;
+          }
         }
         ImGui::Text("%04lX", row * sizeof(data_buf));
         // data row data columns
