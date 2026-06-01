@@ -244,7 +244,8 @@ draw_bg_window(const struct mem* mem) {
   pad.x = 1.0f;
   pad.y = 1.0f;
   ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, pad);
-  if (ImGui::BeginTable("bg_table", 32 /* columns */)) {
+  const auto flags = ImGuiTableFlags_BordersInnerH;
+  if (ImGui::BeginTable("bg_table", 32 /* columns */, flags)) {
     const float dim = 3.0f;
     for (int i = 0; i < 32; i++) {
       ImGui::TableNextRow(ImGuiTableRowFlags_None, dim * 8.0f);
