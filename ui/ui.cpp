@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "tile.h"
 
 #include "bits.h"
 #include "debug_args.h"
@@ -168,6 +169,13 @@ draw_memory_window(const struct mem* mem, const struct regs* regs) {
   ImGui::End();
 }
 
+static float g_palette[4][3] = {
+    {0},
+    {160/255.0f, 160/255.0f, 160/255.0f},
+    {84/255.0f,  84/255.0f,  84/255.0f},
+    {220/255.0f, 220/255.0f, 220/255.0f}
+};
+
 static void
 draw_display_window(const struct dmg_system* dmg) {
   const uint8_t lcdc = mem_read(&dmg->mem, 0xff40);
@@ -178,6 +186,50 @@ draw_display_window(const struct dmg_system* dmg) {
   ImGui::Text("bg tiles @ %s", bit_4(lcdc) ? "8000-8fff" : "8800-97ff");
   ImGui::Text("bg map @ %s",   bit_3(lcdc) ? "9c00-9fff" : "9800-9bff");
   ImGui::Text("bg %s",         bit_0(lcdc) ? "on" : "off");
+  for (int i = 0; i < 4; i++) {
+    char text[16];
+    snprintf(text, sizeof(text), "color %d", i);
+    ImGui::ColorEdit3(text, (float*)g_palette[i]);
+  }
+  ImGui::End();
+}
+
+static void
+draw_tiles_window(const struct dmg_system* dmg) {
+  const uint8_t lcdc = mem_read(&dmg->mem, 0xff40);
+  const uint8_t* tile_data = dmg->mem.mem + (bit_4(lcdc) ? 0x8000 : 0x8800);
+  bool tiles_window = true;
+  ImGui::Begin("tiles", &tiles_window);
+  ImVec2 pad = ImGui::GetStyle().CellPadding;
+  pad.x = 1.0f;
+  pad.y = 1.0f;
+  ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, pad);
+  if (ImGui::BeginTable("tiles_table", 17 /* columns */)) {
+    const float header_col_w = ImGui::CalcTextSize("bg").x + 1.0f;
+    const float dim = 40.0f;
+    // headers row
+    ImGui::TableSetupColumn("bg", ImGuiTableColumnFlags_WidthFixed, header_col_w);
+    char text_buf[16];
+    for (int i = 0; i < 16; i++) {
+      snprintf(text_buf, sizeof(text_buf), "%02X", i);
+      ImGui::TableSetupColumn(text_buf, ImGuiTableColumnFlags_WidthFixed, dim);
+    }
+    ImGui::TableHeadersRow();
+
+    // data rows
+    for (int i = 0; i < 16; i++) {
+      ImGui::TableNextRow(ImGuiTableRowFlags_None, dim);
+      ImGui::TableNextColumn();
+      ImGui::Text("%X0", i); // header column
+      for (int j = 0; j < 16; j++) {
+        ImGui::TableNextColumn();
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        draw_tile(tile_data + (16 * (i*16 + j)), (const float*)g_palette, dl, 5.0f);
+      }
+    }
+    ImGui::EndTable();
+  }
+  ImGui::PopStyleVar(); // ImGuiStyleVar_CellPadding
   ImGui::End();
 }
 
@@ -192,5 +244,6 @@ ui_update(void* data) {
   draw_debug_window(debug);
   draw_memory_window(&dmg->mem, regs);
   draw_display_window(dmg);
+  draw_tiles_window(dmg);
 }
 

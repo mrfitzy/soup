@@ -38,7 +38,7 @@ print: soup
 IMGUI_DIR := ../imgui
 
 TEST_SOURCES := $(wildcard test/*.c)
-TEST_SOURCES += ui/ui_loop.mm ui/ui.cpp
+TEST_SOURCES += ui/ui_loop.mm ui/ui.cpp ui/tile.cpp
 TEST_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl3.cpp $(IMGUI_DIR)/backends/imgui_impl_metal.mm
 TEST_SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 
@@ -82,6 +82,9 @@ $(OUT)/ui_loop.o: ui/ui_loop.mm
 	$(CXX) $(CXXFLAGS) -ObjC++ -fobjc-weak -fobjc-arc -c -o $@ $<
 
 $(OUT)/ui.o: ui/ui.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OUT)/tile.o: ui/tile.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 test_soup: $(OBJS)
