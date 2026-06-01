@@ -195,9 +195,9 @@ draw_display_window(const struct dmg_system* dmg) {
 }
 
 static void
-draw_tiles_window(const struct dmg_system* dmg) {
-  const uint8_t lcdc = mem_read(&dmg->mem, 0xff40);
-  const uint8_t* tile_data = dmg->mem.mem + (bit_4(lcdc) ? 0x8000 : 0x8800);
+draw_tiles_window(const struct mem* mem) {
+  const uint8_t lcdc = mem_read(mem, 0xff40);
+  const uint8_t* tile_data = mem->mem + (bit_4(lcdc) ? 0x8000 : 0x8800);
   bool tiles_window = true;
   ImGui::Begin("tiles", &tiles_window);
   ImVec2 pad = ImGui::GetStyle().CellPadding;
@@ -233,17 +233,48 @@ draw_tiles_window(const struct dmg_system* dmg) {
   ImGui::End();
 }
 
+static void
+draw_bg_window(const struct mem* mem) {
+  const uint8_t lcdc = mem_read(mem, 0xff40);
+  const uint8_t* bg_map = mem->mem + (bit_3(lcdc) ? 0x9c00 : 0x9800);
+  const uint8_t* tile_data = mem->mem + (bit_4(lcdc) ? 0x8000 : 0x8800);
+  bool bg_window = true;
+  ImGui::Begin("bg", &bg_window);
+  ImVec2 pad = ImGui::GetStyle().CellPadding;
+  pad.x = 1.0f;
+  pad.y = 1.0f;
+  ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, pad);
+  if (ImGui::BeginTable("bg_table", 32 /* columns */)) {
+    const float dim = 3.0f;
+    for (int i = 0; i < 32; i++) {
+      ImGui::TableNextRow(ImGuiTableRowFlags_None, dim * 8.0f);
+      for (int j = 0; j < 32; j++) {
+        ImGui::TableNextColumn();
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        const uint8_t tile = bg_map[i*32 + j];
+        draw_tile(tile_data + (16 * tile), (const float*)g_palette, dl, dim);
+      }
+    }
+    ImGui::EndTable();
+  }
+  ImGui::PopStyleVar(); // ImGuiStyleVar_CellPadding
+  ImGui::End();
+}
+
+
 void
 ui_update(void* data) {
   struct debug_args* debug = (struct debug_args*)data;
   const struct dmg_system* dmg = &debug->dmg;
   const struct regs* regs = &dmg->regs;
+  const struct mem* mem = &dmg->mem;
 
   draw_regs_window(regs);
   draw_code_window(dmg);
   draw_debug_window(debug);
-  draw_memory_window(&dmg->mem, regs);
+  draw_memory_window(mem, regs);
   draw_display_window(dmg);
-  draw_tiles_window(dmg);
+  draw_tiles_window(mem);
+  draw_bg_window(mem);
 }
 
