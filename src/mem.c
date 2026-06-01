@@ -25,6 +25,8 @@ mem_init(struct mem* mem, uint16_t max_addr) {
   mem->max_addr = max_addr;
   mem->size = size;
 
+  buf[0xff42] = 0; // SCY
+  buf[0xff43] = 0; // SCX
   buf[0xff4f] = 0; // VBK
 
   memcpy(buf + 0x104, g_logo, sizeof(g_logo));
