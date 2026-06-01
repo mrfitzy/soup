@@ -699,10 +699,99 @@ test_emulate_boot_rom(void** state) {
   regs->pc = 0x0048;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  printf("breaking at test end @ pc = %04x...", actual->regs.pc);
+  // LD C,$0c
+  regs->c = 0x0c;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  //printf("break 0 @ pc = %04x\n", actual->regs.pc);
+  //fflush(stdout);
+  //g_debug->step = true;
+
+  // skip through C-controlled loop from 004a-004f
+  for (int i = 0; i < 0x0c; i++) {
+    for (int j = 0; j < 5; j++) {
+      emulate_instruction_for_test(actual);
+    }
+    mem[0x990f - i] = 0x0c - i;
+  }
+  regs->a = 1;
+  regs->c = 0;
+  regs->hl = 0x9903;
+  regs->pc = 0x0051;
+  flags->z = 1;
+  assert_dmg_equal(expect, actual);
+
+  // LD L,$0f
+  regs->l = 0x0f;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR 0048
+  regs->pc = 0x0048;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD C,$0c
+  regs->c = 0x0c;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // DEC A
+  regs->a = 0;
+  regs->pc++;
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR Z,0055
+  regs->pc = 0x0055;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD H,A
+  regs->h = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,$64
+  regs->a = 0x64;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+  
+  // LD D,A
+  regs->d = 0x64;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+$42),A
+  mem[0xff42] = 0x64;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,$91
+  regs->a = 0x91;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+$40),A
+  mem[0xff40] = 0x91;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // INC B
+  regs->b = 1;
+  regs->pc++;
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
+  fflush(stdout);
   g_debug->step = true;
 
-  // RESUME fast-forward through remaining iters
+  // fast-forward through remaining iters
   while (actual->regs.pc < DMG_ROM_SIZE) {
     emulate_instruction_for_test(actual);
   }
