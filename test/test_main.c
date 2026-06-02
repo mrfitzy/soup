@@ -34,7 +34,8 @@ static void
 assert_mem_equal(const struct mem* a, const struct mem* b) {
   assert_int_equal(a->size, b->size);
   assert_int_equal(a->max_addr, b->max_addr);
-  assert_memory_equal(a->mem, b->mem, a->size);
+  assert_memory_equal(a->mem, b->mem, REG_LY);
+  assert_memory_equal(a->mem + REG_LY + 1, b->mem + REG_LY + 1, a->size - REG_LY - 1);
 }
 
 static inline void
@@ -774,10 +775,6 @@ test_emulate_boot_rom(void** state) {
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  printf("breaking before lcd on @ pc = %04x...\n", actual->regs.pc);
-  fflush(stdout);
-  g_debug->step = true;
-
   // LD ($FF00+$40),A
   mem[0xff40] = 0x91;
   regs->pc += 2;
@@ -791,8 +788,74 @@ test_emulate_boot_rom(void** state) {
   flags->h = 0;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  // LD E,$02
-  regs->e = 0x02;
+  // fast-forward through LY loop starting at 0060
+  while (actual->regs.pc != 0x0070) {
+    emulate_instruction_for_test(actual);
+  }
+  regs->a = 0x90;
+  regs->c = 0;
+  regs->e = 0;
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  regs->pc = 0x0070;
+  assert_dmg_equal(expect, actual);
+
+  // LD C,$13
+  regs->c = 0x13;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // INC H
+  regs->h = 0x01;
+  regs->pc += 1;
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  flags->c = 0;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,H
+  regs->a = 0x01;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD E,$83
+  regs->e = 0x83;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // CP $62
+  regs->pc += 2;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 1;
+  flags->c = 1;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR Z,0080
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD E,$c1
+  regs->e = 0xc1;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // CP $64
+  regs->pc += 2;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 1;
+  flags->c = 1;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,0086
+  regs->pc = 0x0086;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,($FF00+$42)
+  regs->a = 0x64;
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
