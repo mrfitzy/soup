@@ -39,8 +39,8 @@ print: soup
 IMGUI_DIR := ../imgui
 
 TEST_SOURCES := $(wildcard test/*.c)
-TEST_SOURCES += ui/ui_loop.mm ui/ui.cpp ui/tile.cpp
-TEST_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl3.cpp $(IMGUI_DIR)/backends/imgui_impl_metal.mm
+TEST_SOURCES += ui/ui_loop.cpp ui/ui.cpp ui/tile.cpp
+TEST_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl3.cpp $(IMGUI_DIR)/backends/imgui_impl_sdlrenderer3.cpp
 TEST_SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 
 SOURCES := $(COMMON) $(TEST_SOURCES)
@@ -79,8 +79,8 @@ $(OUT)/test.o: test/test.c
 $(OUT)/test_shims.o: test/test_shims.c
 	$(CC) -g -Werror -Wall -Wextra -c -o $@ -Isrc/ -I$(CMOCKA_DIR) $<
 
-$(OUT)/ui_loop.o: ui/ui_loop.mm
-	$(CXX) $(CXXFLAGS) -ObjC++ -fobjc-weak -fobjc-arc -c -o $@ $<
+$(OUT)/ui_loop.o: ui/ui_loop.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OUT)/ui.o: ui/ui.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

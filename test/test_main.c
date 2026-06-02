@@ -203,6 +203,10 @@ test_emulate_boot_rom(void** state) {
   struct flags* flags = &regs->f;
   uint8_t* mem = expect->mem.mem;
 
+  printf("breaking at test begin @ pc = %04x...\n", actual->regs.pc);
+  fflush(stdout);
+  g_debug->step = true;
+
   // LD SP,$fffe
   regs->sp = 0xfffe;
   regs->pc += 3;
@@ -886,9 +890,9 @@ test_emulate_boot_rom(void** state) {
   regs->pc = 0x0060;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
-  fflush(stdout);
-  g_debug->step = true;
+  //printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
+  //fflush(stdout);
+  //g_debug->step = true;
 
   // fast-forward through remaining iters
   while (actual->regs.pc < DMG_ROM_SIZE) {
