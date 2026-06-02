@@ -868,6 +868,24 @@ test_emulate_boot_rom(void** state) {
   flags->c = 0;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
+  // LD ($FF00+$42),A
+  mem[0xff42] = 0x63;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // DEC D
+  regs->d = 0x63;
+  regs->pc++;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,0060
+  regs->pc = 0x0060;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
   printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
   fflush(stdout);
   g_debug->step = true;
