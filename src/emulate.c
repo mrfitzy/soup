@@ -515,6 +515,23 @@ emulate_cp_d8(struct regs* regs, const uint8_t* rom, size_t rom_size) {
 }
 
 static void
+emulate_sub_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
+  auto flags = &regs->f;
+  uint8_t regcode = bits_2_0(opcode);
+  uint8_t a = regs->a;
+  printf("SUB ");
+  uint8_t* reg = regs_get_ptr(regs, mem, regcode, true /* print */);
+  uint8_t b = *reg;
+  regs->a -= b;
+  printf("\n");
+  flags->z = ((a == b) ? 1 : 0);
+  flags->n = 1;
+  flags->h = ((nibble_lo(b) > nibble_lo(a)) ? 1 : 0);
+  flags->c = ((nibble_hi(b) > nibble_hi(a)) ? 1 : 0);
+  regs_mark_all_flags_dirty(regs);
+}
+
+static void
 emulate_ld_d16_a(
     struct regs* regs,
     struct mem* mem,
@@ -611,6 +628,9 @@ emulate_instruction(struct dmg_system* dmg) {
     // 0b001xx000
     emulate_jr_if(regs, rom, rom_size);
     pc_handled = true;
+  } else if ((opcode & 0b11111000) == 0b10010000) {
+    emulate_sub_r(regs, mem, opcode);
+    // 0b10010xxx
   } else {
     handled = false;
   }

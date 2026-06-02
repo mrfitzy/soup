@@ -859,7 +859,14 @@ test_emulate_boot_rom(void** state) {
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  // LD A,($FF00+$44)
+  // SUB B
+  regs->a = 0x63;
+  regs->pc++;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
 
   printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
   fflush(stdout);
