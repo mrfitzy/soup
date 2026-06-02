@@ -1,5 +1,7 @@
 #include "mem.h"
 
+#include "lcdc.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +15,7 @@ static const uint8_t g_logo[] = {
 _Static_assert(sizeof(g_logo) == 0x30, "unexpected size");
 
 void
-mem_init(struct mem* mem, uint16_t max_addr) {
+mem_init(struct mem* mem, struct lcdc* lcdc, uint16_t max_addr) {
   assert(max_addr == DMG_MAX_ADDR);
 
   size_t size = (size_t)max_addr + 1;
@@ -21,12 +23,11 @@ mem_init(struct mem* mem, uint16_t max_addr) {
   assert(buf);
 
   memset(buf, 0xff, size);
+  mem->lcdc = lcdc;
   mem->mem = buf;
   mem->max_addr = max_addr;
   mem->size = size;
 
-  buf[0xff42] = 0; // SCY
-  buf[0xff43] = 0; // SCX
   buf[0xff4f] = 0; // VBK
 
   memcpy(buf + 0x104, g_logo, sizeof(g_logo));
@@ -41,7 +42,11 @@ mem_read(const struct mem* mem, uint16_t addr) {
 void
 mem_write(struct mem* mem, uint16_t addr, uint8_t data) {
   assert(addr < mem->size);
-  mem->mem[addr] = data;
+  if (addr == REG_LCDC) {
+    lcdc_reg_write(mem->lcdc, data);
+  } else {
+    mem->mem[addr] = data;
+  }
 }
 
 uint8_t

@@ -774,6 +774,10 @@ test_emulate_boot_rom(void** state) {
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
+  printf("breaking before lcd on @ pc = %04x...\n", actual->regs.pc);
+  fflush(stdout);
+  g_debug->step = true;
+
   // LD ($FF00+$40),A
   mem[0xff40] = 0x91;
   regs->pc += 2;
@@ -786,6 +790,13 @@ test_emulate_boot_rom(void** state) {
   flags->n = 0;
   flags->h = 0;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD E,$02
+  regs->e = 0x02;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,($FF00+$44)
 
   printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
   fflush(stdout);

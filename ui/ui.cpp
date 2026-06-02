@@ -9,6 +9,8 @@
 #include "imgui.h"
 #include <SDL3/SDL.h>
 
+#include <inttypes.h>
+
 static void
 draw_regs_window(const struct regs* regs) {
     const struct flags* f = &regs->f;
@@ -178,10 +180,12 @@ static float g_palette[4][3] = {
 
 static void
 draw_display_window(const struct dmg_system* dmg) {
-  const uint8_t lcdc = mem_read(&dmg->mem, 0xff40);
+  const uint8_t lcdc = mem_read(&dmg->mem, REG_LCDC);
+  const uint8_t ly = mem_read(&dmg->mem, REG_LY);
   bool display_window = true;
   ImGui::Begin("display", &display_window);
   ImGui::Text("lcd %s",        bit_7(lcdc) ? "on" : "off");
+  ImGui::Text("ly %d",         (int)ly);
   ImGui::Text("window %s",     bit_5(lcdc) ? "on" : "off");
   ImGui::Text("bg tiles @ %s", bit_4(lcdc) ? "8000-8fff" : "8800-97ff");
   ImGui::Text("bg map @ %s",   bit_3(lcdc) ? "9c00-9fff" : "9800-9bff");

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lcdc.h"
 #include "mem.h"
 #include "op.h"
 #include "regs.h"
@@ -10,6 +11,7 @@
 struct dmg_system {
   struct regs regs;
   struct mem mem;
+  struct lcdc lcdc;
   const struct op* ops;
   const struct op* cb_ops;
   const uint8_t* rom;

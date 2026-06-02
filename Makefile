@@ -13,7 +13,8 @@ ZIG := $(XCHAIN)/zig/zig
 
 CC := $(ZIG) cc
 
-CFLAGS := -g -Werror -Wall -Wextra -Wpadded
+CFLAGS := -g -Werror -Wall -Wextra -Wpadded `pkg-config --cflags sdl3`
+LIBS := `pkg-config --libs sdl3`
 
 OBJS := $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 OBJS := $(addprefix $(OUT)/, $(OBJS))
@@ -22,7 +23,7 @@ $(OUT)/%.o:src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 soup: $(OBJS)
-	$(CC) -o soup $^ $(CFLAGS)
+	$(CC) -o soup $^ $(CFLAGS) $(LIBS)
 
 SOUP_ARGS := ops.bin cb_ops.bin DMG_ROM.bin
 SOUP_ARGS := $(addprefix data/, $(SOUP_ARGS))
