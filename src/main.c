@@ -2,6 +2,7 @@
 #include "diag.h"
 #include "emulate.h"
 #include "op.h"
+#include "ui.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -31,6 +32,12 @@ map_file(const char* path, size_t size) {
 static void
 print_usage(const char* progname) {
   fprintf(stderr, "%s [-p] ops.bin cb_ops.bin dmg_rom.bin\n", progname);
+}
+
+static int
+emulate_rom(void* data) {
+  dmg_emulate_rom((struct dmg_system*)data);
+  return 0;
 }
 
 int
@@ -67,9 +74,11 @@ main(int argc, char** argv) {
     print_rom(ops, cb_ops, rom, 0xa8);
     print_data(rom + 0xa8, 0xe0 - 0xa8);
     print_rom(ops, cb_ops, rom + 0xe0, DMG_ROM_SIZE - 0xe0);
-  } else {
-    emulate_rom(ops, cb_ops, rom, DMG_ROM_SIZE);
+    return 0;
   }
-  return 0;
+  struct dmg_system dmg;
+  dmg_init(&dmg, ops, cb_ops, rom, DMG_ROM_SIZE);
+  int rc = ui_run(emulate_rom, &dmg);
+  return rc;
 }
 

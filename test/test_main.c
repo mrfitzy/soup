@@ -8,7 +8,7 @@
 #include "test.h"
 #include "debug_args.h"
 #include "test_shims.h"
-#include "ui/ui.h"
+#include "ui.h"
 
 #include <fcntl.h>
 #include <semaphore.h>

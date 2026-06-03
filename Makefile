@@ -3,10 +3,9 @@
 OUT    := build
 _dummy := $(shell mkdir -p $(OUT))
 
-MAIN_C  := src/main.c
-OTHER   := $(MAIN_C)
+OTHER   := src/main.c src/ui_loop.c
 COMMON  := $(filter-out $(OTHER), $(wildcard src/*.c))
-SOURCES := $(COMMON) $(MAIN_C)
+SOURCES := $(COMMON) $(OTHER)
 
 XCHAIN := ../xchain/third-party
 ZIG := $(XCHAIN)/zig/zig
@@ -39,7 +38,7 @@ print: soup
 IMGUI_DIR := ../imgui
 
 TEST_SOURCES := $(wildcard test/*.c)
-TEST_SOURCES += ui/ui_loop.cpp ui/ui.cpp ui/tile.cpp
+TEST_SOURCES += ui/ui.cpp ui/tile.cpp test/ui_loop_dbg.cpp
 TEST_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl3.cpp $(IMGUI_DIR)/backends/imgui_impl_sdlrenderer3.cpp
 TEST_SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 
@@ -73,14 +72,14 @@ $(OUT)/%.o:$(IMGUI_DIR)/%.cpp
 $(OUT)/%.o:$(IMGUI_DIR)/backends/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+$(OUT)/%.o:test/%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 $(OUT)/test.o: test/test.c
 	$(CC) -g -Werror -Wall -Wextra -c -o $@ -Isrc/ -I$(CMOCKA_DIR) $<
 
 $(OUT)/test_shims.o: test/test_shims.c
 	$(CC) -g -Werror -Wall -Wextra -c -o $@ -Isrc/ -I$(CMOCKA_DIR) $<
-
-$(OUT)/ui_loop.o: ui/ui_loop.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OUT)/ui.o: ui/ui.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

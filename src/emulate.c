@@ -653,23 +653,3 @@ post_op:
   fflush(stdout);
 }
 
-void
-emulate_rom(
-    const struct op* ops,
-    const struct op* cb_ops,
-    const uint8_t* rom,
-    size_t rom_size) {
-  struct dmg_system dmg;
-  dmg_init(&dmg, ops, cb_ops, rom, rom_size);
-  struct regs* regs = &dmg.regs;
-  print_regs(regs);
-  print_mem(&dmg.mem);
-  printf("\n");
-  while (regs->pc < rom_size) {
-    emulate_instruction(&dmg);
-  }
-  fprintf(stderr, "\nerror: pc overload\n");
-  print_regs(regs);
-  assert(false);
-}
-

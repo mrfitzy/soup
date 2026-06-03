@@ -1,6 +1,10 @@
 #include "dmg.h"
+#include "emulate.h"
+
+#include "diag.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 void
@@ -40,5 +44,16 @@ dmg_get_op(const struct dmg_system* dmg, const struct op** cb_op_out) {
   }
 
   return dmg->ops + opcode;
+}
+
+void
+dmg_emulate_rom(struct dmg_system* dmg) {
+  struct regs* regs = &dmg->regs;
+  while (regs->pc < dmg->rom_size) {
+    emulate_instruction(dmg);
+  }
+  fprintf(stderr, "\nerror: pc overload\n");
+  print_regs(regs);
+  assert(false);
 }
 

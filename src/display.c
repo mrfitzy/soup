@@ -49,11 +49,12 @@ draw_bg(void) {
 void
 display_init(struct dmg_system* dmg) {
   g_dmg = dmg;
-  g_window = SDL_CreateWindow("soup_disp", 160*SCALE, 144*SCALE, 0);
+  g_window = SDL_CreateWindow("soup", 160*SCALE, 144*SCALE, 0);
   g_r = SDL_CreateRenderer(g_window, NULL);
   g_target = SDL_CreateTexture(
       g_r, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 256, 256);
   g_frame_sem = SDL_CreateSemaphore(0);
+  SDL_RaiseWindow(g_window);
 }
 
 void
@@ -68,7 +69,7 @@ display_should_render(void) {
 
 void
 display_render(void) {
-  // bg surface
+  // render bg surface
   const struct lcdc* lcdc = &g_dmg->lcdc;
   SDL_SetRenderTarget(g_r, g_target);
   SDL_SetRenderDrawColor(g_r, 0, 0, 0, 255);
@@ -76,17 +77,17 @@ display_render(void) {
   draw_bg();
   SDL_SetRenderTarget(g_r, NULL);
 
-  // window
+  // render window
   SDL_SetRenderDrawColor(g_r, 0, 0, 0, 255);
   SDL_RenderClear(g_r);
 
-  // viewport
-  SDL_FRect src0 = { *(lcdc->scx), *(lcdc->scy), 160, 144 };
+  // render viewport
+  SDL_FRect src = { *(lcdc->scx), *(lcdc->scy), 160, 144 };
   SDL_FRect viewport = { 0, 0, 160*SCALE, 144*SCALE };
   SDL_SetTextureScaleMode(g_target, SDL_SCALEMODE_NEAREST);
-  SDL_RenderTexture(g_r, g_target, &src0, &viewport);
+  SDL_RenderTexture(g_r, g_target, &src, &viewport);
 
+  // present
   SDL_RenderPresent(g_r);
-  (void)lcdc;
 }
 
