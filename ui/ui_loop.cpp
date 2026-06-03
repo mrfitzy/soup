@@ -113,7 +113,9 @@ ui_run(int (*work_fn)(void*), void* data) {
     ImGui::NewFrame();
 
     // Draw application GUI
-    display_render();
+    if (display_should_render()) {
+      display_render();
+    }
     ui_update(data);
 
     // Rendering
