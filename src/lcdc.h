@@ -11,6 +11,7 @@ struct lcdc {
   uint8_t* ly;
   uint8_t* scx;
   uint8_t* scy;
+  int* palette; // (r,g,b)*4
 };
 
 void lcdc_init(struct lcdc* lcdc, uint8_t* memmap);

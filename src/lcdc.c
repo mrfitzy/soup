@@ -1,6 +1,7 @@
 #include "lcdc.h"
 
 #include "bits.h"
+#include "display.h"
 #include "mem.h"
 
 #include <SDL3/SDL.h>
@@ -31,6 +32,7 @@ line_complete_cb(void* data, SDL_TimerID id, uint64_t interval) {
 
   if (*(lcdc->ly) == 153) {
     *(lcdc->ly) = 0;
+    display_next_frame();
   } else {
     *(lcdc->ly) += 1;
   }

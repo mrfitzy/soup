@@ -1,6 +1,7 @@
 #include "args.h"
 #include "bits.h"
 #include "diag.h"
+#include "display.h"
 #include "dmg.h"
 #include "emulate.h"
 #include "signal_handler.h"

@@ -1,5 +1,7 @@
 #include "ui.h"
 
+#include "debug_args.h"
+#include "display.h"
 #include "signal_handler.h"
 
 #include "imgui.h"
@@ -16,6 +18,9 @@ ui_run(int (*work_fn)(void*), void* data) {
     printf("Error: SDL_Init(): %s\n", SDL_GetError());
     return 1;
   }
+
+  auto debug = (struct debug_args*)data;
+  display_init(&debug->dmg);
 
   SDL_Thread* thread = SDL_CreateThread(work_fn, "test", data);
 
@@ -108,6 +113,7 @@ ui_run(int (*work_fn)(void*), void* data) {
     ImGui::NewFrame();
 
     // Draw application GUI
+    display_render();
     ui_update(data);
 
     // Rendering

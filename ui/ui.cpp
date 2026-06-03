@@ -249,7 +249,7 @@ draw_bg_window(const struct mem* mem) {
   const uint8_t scy = mem_read(mem, 0xff42);
   const uint8_t scx = mem_read(mem, 0xff43);
 
-  const float dot_dim = 3.0f;
+  const float dot_dim = 2.0f;
   const float tile_dim = dot_dim * 8.0f;
   const float window_dim = tile_dim * 32.0f;
 
