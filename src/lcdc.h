@@ -1,5 +1,7 @@
 #pragma once
 
+struct display;
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -11,12 +13,12 @@ struct lcdc {
   uint8_t* ly;
   uint8_t* scx;
   uint8_t* scy;
-  int* palette; // (r,g,b)*4
+  struct display* display;
 };
 
-void lcdc_init(struct lcdc* lcdc, uint8_t* memmap);
+void lcdc_init(struct lcdc*, uint8_t* memmap);
 
-void lcdc_reg_write(struct lcdc* lcdc, uint8_t data);
+void lcdc_reg_write(struct lcdc*, uint8_t data);
 
 #ifdef __cplusplus
 } // extern "C"

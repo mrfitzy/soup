@@ -12,15 +12,7 @@
 
 int
 ui_run(int (*work_fn)(void*), void* data) {
-  // Setup SDL
-  // [If using SDL_MAIN_USE_CALLBACKS: all code below until the main loop starts would likely be your SDL_AppInit() function]
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
-    printf("Error: SDL_Init(): %s\n", SDL_GetError());
-    return 1;
-  }
-
   auto debug = (struct debug_args*)data;
-  display_init(&debug->dmg);
 
   SDL_Thread* thread = SDL_CreateThread(work_fn, "test", data);
 
@@ -113,8 +105,8 @@ ui_run(int (*work_fn)(void*), void* data) {
     ImGui::NewFrame();
 
     // Draw application GUI
-    if (display_should_render()) {
-      display_render();
+    if (display_should_render(debug->dmg.display)) {
+      display_render(debug->dmg.display);
     }
     ui_update(data);
 
@@ -137,7 +129,6 @@ ui_run(int (*work_fn)(void*), void* data) {
 
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
-  SDL_Quit();
 
   return rc;
 }

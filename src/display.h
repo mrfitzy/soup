@@ -8,13 +8,17 @@ extern "C" {
 
 struct dmg_system;
 
-void display_init(struct dmg_system* dmg);
+struct display;
 
-void display_next_frame(void);
+struct display* display_create(struct dmg_system* dmg);
 
-bool display_should_render(void);
+void display_destroy(struct display*);
 
-void display_render(void);
+void display_next_frame(struct display*);
+
+bool display_should_render(struct display*);
+
+void display_render(struct display*);
 
 #ifdef __cplusplus
 } // extern "C"

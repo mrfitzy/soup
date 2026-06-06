@@ -18,6 +18,7 @@ dmg_init(
   regs_init(&dmg->regs);
   mem_init(&dmg->mem, &dmg->lcdc, DMG_MAX_ADDR);
   lcdc_init(&dmg->lcdc, dmg->mem.mem);
+  dmg->display = NULL;
   dmg->ops = ops;
   dmg->cb_ops = cb_ops;
   dmg->rom = rom;
@@ -26,6 +27,20 @@ dmg_init(
   // TODO: rename rom -> boot_rom
   assert(dmg->mem.size >= rom_size);
   memcpy(dmg->mem.mem, rom, rom_size);
+}
+
+void
+dmg_create_display(struct dmg_system* dmg) {
+  assert(dmg->display == NULL);
+  dmg->display = display_create(dmg);
+  dmg->lcdc.display = dmg->display;
+}
+
+void
+dmg_destroy_display(struct dmg_system* dmg) {
+  dmg->lcdc.display = NULL;
+  display_destroy(dmg->display);
+  dmg->display = NULL;
 }
 
 const struct op*

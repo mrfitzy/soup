@@ -8,8 +8,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define auto __auto_type
-
 static inline void
 regs_update_pc(struct regs* regs, const struct op* op) {
     regs->pc += op->length;

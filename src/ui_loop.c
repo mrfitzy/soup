@@ -1,20 +1,17 @@
 #include "ui.h"
 
 #include "display.h"
+#include "dmg.h"
 
 #include <stdio.h>
 #include <SDL3/SDL.h>
 
 int
 ui_run(int (*work_fn)(void*), void* data) {
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
-    fprintf(stderr, "error: SDL_Init(): %s\n", SDL_GetError());
-    return 1;
-  }
-
-  display_init((struct dmg_system*)data);
 
   SDL_Thread* thread = SDL_CreateThread(work_fn, "emulator", data);
+
+  auto dmg = (struct dmg_system*)data;
 
   bool done = false;
   while (!done) {
@@ -26,14 +23,13 @@ ui_run(int (*work_fn)(void*), void* data) {
       }
     }
 
-    if (display_should_render()) {
-      display_render();
+    if (display_should_render(dmg->display)) {
+      display_render(dmg->display);
     }
   }
 
   int rc;
   SDL_WaitThread(thread, &rc);
-  SDL_Quit();
 
   return rc;
 }

@@ -12,7 +12,7 @@ ZIG := $(XCHAIN)/zig/zig
 
 CC := $(ZIG) cc
 
-CFLAGS := -g -Werror -Wall -Wextra -Wpadded `pkg-config --cflags sdl3`
+CFLAGS := -std=c23 -g -Werror -Wall -Wextra -Wpadded `pkg-config --cflags sdl3`
 LIBS := `pkg-config --libs sdl3`
 
 OBJS := $(addsuffix .o, $(basename $(notdir $(SOURCES))))

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "display.h"
 #include "lcdc.h"
 #include "mem.h"
 #include "op.h"
@@ -12,6 +13,7 @@ struct dmg_system {
   struct regs regs;
   struct mem mem;
   struct lcdc lcdc;
+  struct display* display;
   const struct op* ops;
   const struct op* cb_ops;
   const uint8_t* rom;
@@ -24,6 +26,10 @@ void dmg_init(
   const struct op* cb_ops,
   const uint8_t* rom,
   size_t rom_size);
+
+void dmg_create_display(struct dmg_system* dmg);
+
+void dmg_destroy_display(struct dmg_system* dmg);
 
 void dmg_emulate_rom(struct dmg_system* dmg);
 

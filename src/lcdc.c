@@ -32,7 +32,9 @@ line_complete_cb(void* data, SDL_TimerID id, uint64_t interval) {
 
   if (*(lcdc->ly) == 153) {
     *(lcdc->ly) = 0;
-    display_next_frame();
+    if (lcdc->display) {
+      display_next_frame(lcdc->display);
+    }
   } else {
     *(lcdc->ly) += 1;
   }

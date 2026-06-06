@@ -193,9 +193,7 @@ static uint8_t convert_logo(uint8_t logo, bool nibble) {
 static void
 test_emulate_boot_rom(void** state) {
   struct debug_args* debug_args = (struct debug_args*)(*state);
-
   struct dmg_system* actual = &debug_args->dmg;
-  dmg_init(actual, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
 
   struct dmg_system e;
   struct dmg_system* expect = &e;
@@ -203,10 +201,6 @@ test_emulate_boot_rom(void** state) {
   struct regs* regs = &expect->regs;
   struct flags* flags = &regs->f;
   uint8_t* mem = expect->mem.mem;
-
-  printf("breaking at test begin @ pc = %04x...\n", actual->regs.pc);
-  fflush(stdout);
-  g_debug->step = true;
 
   // LD SP,$fffe
   regs->sp = 0xfffe;
@@ -903,12 +897,7 @@ test_emulate_boot_rom(void** state) {
 
 static int
 test_thread(void* data) {
-  struct debug_args* debug_args = data;
-  const struct soup_args* soup_args = &debug_args->soup_args;
-  g_ops = map_file(soup_args->ops_path, OPS_BIN_SIZE);
-  g_cb_ops = map_file(soup_args->cb_ops_path, OPS_BIN_SIZE);
-  g_rom = map_file(soup_args->rom_path, DMG_ROM_SIZE);
-  g_debug = debug_args;
+  g_debug = (struct debug_args*)data;
   int rc = test_run(test_emulate_boot_rom, (void**)data);
   return rc;
 }
@@ -922,7 +911,16 @@ main(int argc, char** argv) {
     fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
     return 1;
   }
+  g_ops = map_file(args.soup_args.ops_path, OPS_BIN_SIZE);
+  g_cb_ops = map_file(args.soup_args.cb_ops_path, OPS_BIN_SIZE);
+  g_rom = map_file(args.soup_args.rom_path, DMG_ROM_SIZE);
 
+  dmg_init(&args.dmg, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
+
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+    fprintf(stderr, "error: SDL_Init(): %s\n", SDL_GetError());
+    return 1;
+  }
   args.sem = SDL_CreateSemaphore(0);
   if (args.sem == NULL) {
     fprintf(stderr, "error: SDL_CreateSemaphore failed: %s\n", SDL_GetError());
@@ -932,6 +930,12 @@ main(int argc, char** argv) {
 
   signal_handler_run();
 
+  dmg_create_display(&args.dmg);
   int rc = ui_run(test_thread, &args);
+  dmg_destroy_display(&args.dmg);
+
+  SDL_DestroySemaphore(args.sem);
+  SDL_Quit();
+
   return rc;
 }

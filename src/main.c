@@ -4,6 +4,7 @@
 #include "op.h"
 #include "ui.h"
 
+#include <SDL3/SDL.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -76,9 +77,19 @@ main(int argc, char** argv) {
     print_rom(ops, cb_ops, rom + 0xe0, DMG_ROM_SIZE - 0xe0);
     return 0;
   }
+
   struct dmg_system dmg;
   dmg_init(&dmg, ops, cb_ops, rom, DMG_ROM_SIZE);
+
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+    fprintf(stderr, "error: SDL_Init(): %s\n", SDL_GetError());
+    return 1;
+  }
+  dmg_create_display(&dmg);
   int rc = ui_run(emulate_rom, &dmg);
+  dmg_destroy_display(&dmg);
+  SDL_Quit();
+
   return rc;
 }
 
