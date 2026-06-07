@@ -885,9 +885,82 @@ test_emulate_boot_rom(void** state) {
   regs->pc = 0x0060;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  //printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
-  //fflush(stdout);
-  //g_debug->step = true;
+  // fast-forward until sound #1 @ 0x0080
+  while (actual->regs.pc != 0x0080) {
+    emulate_instruction_for_test(actual);
+  }
+  mem[0xff42] = 0x03;
+  regs->a = 0x62;
+  regs->d = 0x03;
+  regs->e = 0x83;
+  regs->h = 0x62;
+  regs->pc = 0x0080;
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  assert_dmg_equal(expect, actual);
+
+  // LD A,E
+  regs->a = 0x83;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+C),A
+  mem[0xff13] = 0x83;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // INC C
+  regs->c = 0x14;
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,$87
+  regs->a = 0x87;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+C),A
+  mem[0xff14] = 0x87;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,($FF00+$42)
+  regs->a = 0x03;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // SUB B
+  regs->a = 0x02;
+  regs->pc++;
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+$42),A
+  mem[0xff42] = 0x02;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // DEC D
+  regs->d = 0x02;
+  regs->pc++;
+  // flags same from SUB B
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,0060
+  regs->pc = 0x0060;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
+  fflush(stdout);
+  g_debug->step = true;
 
   // fast-forward through remaining iters
   while (actual->regs.pc < DMG_ROM_SIZE) {

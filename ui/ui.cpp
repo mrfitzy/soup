@@ -112,6 +112,11 @@ draw_memory_window(const struct mem* mem, const struct regs* regs) {
     jump_row = (bit_3(lcdc) ? 0x9fff : 0x9bff) / 16;
     s_jump_highlight = 60;
   }
+  ImGui::SameLine();
+  if (ImGui::Button("zero")) {
+    jump_row = 0xff00 / 16;
+    s_jump_highlight = 60;
+  }
 
   const auto highlight = ImGui::GetColorU32(ImVec4(0.8f, 0.2f, 0.2f, 0.4f));
   const ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
@@ -182,10 +187,12 @@ static void
 draw_display_window(const struct dmg_system* dmg) {
   const uint8_t lcdc = mem_read(&dmg->mem, REG_LCDC);
   const uint8_t ly = mem_read(&dmg->mem, REG_LY);
+  const uint8_t scx = mem_read(&dmg->mem, REG_SCX);
+  const uint8_t scy = mem_read(&dmg->mem, REG_SCY);
   bool display_window = true;
   ImGui::Begin("display", &display_window);
   ImGui::Text("lcd %s",        bit_7(lcdc) ? "on" : "off");
-  ImGui::Text("ly %d",         (int)ly);
+  ImGui::Text("ly %02x scx %02x scy %02x", (int)ly, (int)scx, (int)scy);
   ImGui::Text("window %s",     bit_5(lcdc) ? "on" : "off");
   ImGui::Text("bg tiles @ %s", bit_4(lcdc) ? "8000-8fff" : "8800-97ff");
   ImGui::Text("bg map @ %s",   bit_3(lcdc) ? "9c00-9fff" : "9800-9bff");
