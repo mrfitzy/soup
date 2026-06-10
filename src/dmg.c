@@ -16,8 +16,9 @@ dmg_init(
     size_t rom_size) {
   memset(dmg, 0, sizeof(struct dmg_system));
   regs_init(&dmg->regs);
-  mem_init(&dmg->mem, &dmg->lcdc, DMG_MAX_ADDR);
+  mem_init(&dmg->mem, &dmg->apu, &dmg->lcdc, DMG_MAX_ADDR);
   lcdc_init(&dmg->lcdc, dmg->mem.mem);
+  apu_init(&dmg->apu, dmg->mem.mem);
   dmg->display = NULL;
   dmg->ops = ops;
   dmg->cb_ops = cb_ops;

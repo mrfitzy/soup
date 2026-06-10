@@ -1,5 +1,6 @@
 #pragma once
 
+#include "apu.h"
 #include "display.h"
 #include "lcdc.h"
 #include "mem.h"
@@ -13,6 +14,7 @@ struct dmg_system {
   struct regs regs;
   struct mem mem;
   struct lcdc lcdc;
+  struct apu apu;
   struct display* display;
   const struct op* ops;
   const struct op* cb_ops;

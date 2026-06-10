@@ -1,5 +1,6 @@
 #include "mem.h"
 
+#include "apu.h"
 #include "lcdc.h"
 
 #include <assert.h>
@@ -15,7 +16,11 @@ static const uint8_t g_logo[] = {
 _Static_assert(sizeof(g_logo) == 0x30, "unexpected size");
 
 void
-mem_init(struct mem* mem, struct lcdc* lcdc, uint16_t max_addr) {
+mem_init(
+    struct mem* mem,
+    struct apu* apu,
+    struct lcdc* lcdc,
+    uint16_t max_addr) {
   assert(max_addr == DMG_MAX_ADDR);
 
   size_t size = (size_t)max_addr + 1;
@@ -23,6 +28,7 @@ mem_init(struct mem* mem, struct lcdc* lcdc, uint16_t max_addr) {
   assert(buf);
 
   memset(buf, 0xff, size);
+  mem->apu = apu;
   mem->lcdc = lcdc;
   mem->mem = buf;
   mem->max_addr = max_addr;
@@ -42,7 +48,9 @@ mem_read(const struct mem* mem, uint16_t addr) {
 void
 mem_write(struct mem* mem, uint16_t addr, uint8_t data) {
   assert(addr < mem->size);
-  if (addr == REG_LCDC) {
+  if ((addr >= REG_APU_MIN) && (addr <= REG_APU_MAX)) {
+    apu_reg_write(mem->apu, addr, data);
+  } else if (addr == REG_LCDC) {
     lcdc_reg_write(mem->lcdc, data);
   } else {
     mem->mem[addr] = data;

@@ -901,12 +901,17 @@ test_emulate_boot_rom(void** state) {
   flags->c = 0;
   assert_dmg_equal(expect, actual);
 
+  printf("breaking before sound #1 @ pc = %04x...\n", actual->regs.pc);
+  fflush(stdout);
+  g_debug->step = true;
+
   // LD A,E
   regs->a = 0x83;
   regs->pc++;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
   // LD ($FF00+C),A
+  // sound 1, freq lo
   mem[0xff13] = 0x83;
   regs->pc++;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
@@ -925,6 +930,7 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
   // LD ($FF00+C),A
+  // sound 1, freq hi
   mem[0xff14] = 0x87;
   regs->pc++;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
