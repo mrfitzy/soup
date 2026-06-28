@@ -8,11 +8,8 @@
 
 int
 ui_run(int (*work_fn)(void*), void* data) {
-
   SDL_Thread* thread = SDL_CreateThread(work_fn, "emulator", data);
-
   auto dmg = (struct dmg_system*)data;
-
   bool done = false;
   while (!done) {
     SDL_Event event;
@@ -30,6 +27,5 @@ ui_run(int (*work_fn)(void*), void* data) {
 
   int rc;
   SDL_WaitThread(thread, &rc);
-
   return rc;
 }

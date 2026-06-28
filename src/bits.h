@@ -56,6 +56,10 @@ static inline uint8_t bits_4_3(uint8_t byte) {
   return (byte & 0b00011000) >> 3;
 }
 
+static inline uint8_t bits_5_0(uint8_t byte) {
+  return (byte & 0b00111111);
+}
+
 static inline uint8_t bits_5_3(uint8_t byte) {
   return (byte & 0b00111000) >> 3;
 }
@@ -66,5 +70,13 @@ static inline uint8_t bits_5_4(uint8_t byte) {
 
 static inline uint8_t bits_7_3(uint8_t byte) {
   return (byte & 0b11111000) >> 3;
+}
+
+static inline uint8_t bits_7_4(uint8_t byte) {
+  return (byte & 0b11110000) >> 4;
+}
+
+static inline uint8_t bits_7_6(uint8_t byte) {
+  return (byte & 0b11000000) >> 6;
 }
 

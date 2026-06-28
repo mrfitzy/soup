@@ -28,6 +28,7 @@ mem_init(
   assert(buf);
 
   memset(buf, 0xff, size);
+  memset(buf + REG_APU_MIN, 0, REG_APU_MAX - REG_APU_MIN + 1);
   mem->apu = apu;
   mem->lcdc = lcdc;
   mem->mem = buf;

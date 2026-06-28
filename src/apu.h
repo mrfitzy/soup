@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+typedef struct SDL_AudioStream SDL_AudioStream;
+typedef struct SDL_Semaphore SDL_Semaphore;
+
 struct apu {
   // sound 1
   uint8_t* nr10; // sweep
@@ -29,6 +32,11 @@ struct apu {
   uint8_t* nr50; // volume
   uint8_t* nr51; // mixer
   uint8_t* nr52; // enable
+
+  SDL_AudioStream* stream1;
+  SDL_Semaphore* sem1;
+  int device_id;
+  int pad;
 };
 
 void apu_init(struct apu*, uint8_t* memmap);

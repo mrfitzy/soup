@@ -901,9 +901,9 @@ test_emulate_boot_rom(void** state) {
   flags->c = 0;
   assert_dmg_equal(expect, actual);
 
-  printf("breaking before sound #1 @ pc = %04x...\n", actual->regs.pc);
-  fflush(stdout);
-  g_debug->step = true;
+  //printf("breaking before sound #1 @ pc = %04x...\n", actual->regs.pc);
+  //fflush(stdout);
+  //g_debug->step = true;
 
   // LD A,E
   regs->a = 0x83;
@@ -964,9 +964,9 @@ test_emulate_boot_rom(void** state) {
   regs->pc = 0x0060;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
-  fflush(stdout);
-  g_debug->step = true;
+  //printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
+  //fflush(stdout);
+  //g_debug->step = true;
 
   // fast-forward through remaining iters
   while (actual->regs.pc < DMG_ROM_SIZE) {
