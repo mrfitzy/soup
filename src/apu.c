@@ -9,10 +9,6 @@
 
 #include <SDL3/SDL.h>
 
-#define APU_SAMPLE_RATE_HZ (44'100)
-
-#define APU_MIN_SAMPLES (APU_SAMPLE_RATE_HZ / 2)
-
 #define APU_AUDIOSPEC_MAKE(_freq) \
     { .format = SDL_AUDIO_U8, .channels = 1, .freq = _freq }
 
@@ -40,17 +36,15 @@ apu_init(struct apu* apu, uint8_t* memmap) {
   apu->nr52 = memmap + REG_NR52;
 
   bool ret = SDL_Init(SDL_INIT_AUDIO);
-  if (!ret) {
-    fprintf(stderr, "SDL_Init(SDL_INIT_AUDIO): %s\n", SDL_GetError());
-  }
-  SDL_AudioSpec spec = APU_AUDIOSPEC_MAKE(1);
-  apu->stream1 = SDL_CreateAudioStream(&spec, NULL);
+  assert(ret);
+
+  apu->stream1 = SDL_CreateAudioStream(NULL, NULL);
   apu->sem1 = SDL_CreateSemaphore(0);
   apu->device_id = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
-  if (!apu->device_id) {
-    fprintf(stderr, "SDL_OpenAudioDevice: %s\n", SDL_GetError());
-  }
-  (void)SDL_CreateThread(sound1_thread, "sound1", apu);
+  assert(apu->device_id);
+
+  auto thread = SDL_CreateThread(sound1_thread, "sound1", apu);
+  assert(thread);
 }
 
 static void
@@ -81,15 +75,17 @@ sound1_queue_samples(struct apu* apu) {
   const int samples_per_step = step_s * sample_rate;
   const int dir = bit_3(nr12);
 
+  // samples
   int sampled = 0;
-  uint8_t period_samples[8];
+  uint8_t pd_samples[8];
+  const int zero = SDL_GetSilenceValueForFormat(SDL_AUDIO_U8);
   while (sampled < num_samples) {
-    for (size_t i = 0; i < sizeof(period_samples); i++) {
-      period_samples[i] = s_samples[duty][i] ? amp : 0;
+    for (size_t i = 0; i < sizeof(pd_samples); i++) {
+      pd_samples[i] = s_samples[duty][i] ? zero + ((amp+1) * 8) - 1 : zero;
     }
-    SDL_PutAudioStreamData(
-        apu->stream1, period_samples, sizeof(period_samples));
-    sampled += sizeof(period_samples);
+    SDL_PutAudioStreamData(apu->stream1, pd_samples, sizeof(pd_samples));
+
+    sampled += sizeof(pd_samples);
     if (sampled % samples_per_step == 0) {
       amp += dir ? 1 : -1;
     }
@@ -112,8 +108,7 @@ apu_nr14_write(struct apu* apu, uint8_t data) {
   *(apu->nr14) = data;
 
   if (bit_7(data) && bit_7(prev)) {
-    // stop sound 1
-    SDL_UnbindAudioStream(apu->stream1);
+    SDL_UnbindAudioStream(apu->stream1); // stop sound 1
   }
   if (!bit_7(data)) {
     return;
@@ -121,17 +116,14 @@ apu_nr14_write(struct apu* apu, uint8_t data) {
 
   // frequency
   const uint16_t x = ((uint16_t)bits_2_0(data) << 8) | *(apu->nr13);
-  const int freq = 4194304 / (4 * 2 * (2048 - x));
-  assert(freq > 63); assert(freq <= 131'100);
+  const int freq = 1048576 / (2048 - x);
 
   // apply changes, (re)activate sound 1
-  SDL_AudioSpec spec = APU_AUDIOSPEC_MAKE(freq * 8);
+  SDL_AudioSpec spec = APU_AUDIOSPEC_MAKE(freq);
   SDL_SetAudioStreamFormat(apu->stream1, &spec, NULL);
   SDL_ClearAudioStream(apu->stream1);
   bool ret = SDL_BindAudioStream(apu->device_id, apu->stream1);
-  if (!ret) {
-    fprintf(stderr, "SDL_BindAudioStream: %s\n", SDL_GetError());
-  }
+  assert(ret);
   // XXX check counter bit
   SDL_SignalSemaphore(apu->sem1);
 }
