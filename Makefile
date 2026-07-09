@@ -1,4 +1,6 @@
+#
 # main program
+#
 
 OUT    := build
 _dummy := $(shell mkdir -p $(OUT))
@@ -33,7 +35,9 @@ run: soup
 print: soup
 	./soup -p $(SOUP_ARGS)
 
+#
 # test program
+#
 
 IMGUI_DIR := ../imgui
 
@@ -54,8 +58,7 @@ CXXFLAGS += -Wall -Wformat
 OBJS := $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 OBJS := $(addprefix $(OUT)/, $(OBJS))
 
-LIBS := -framework Metal -framework MetalKit -framework Cocoa -framework IOKit -framework CoreVideo -framework QuartzCore
-LIBS += `pkg-config --libs sdl3`
+LIBS := `pkg-config --libs sdl3`
 LIBS += -L$(XCHAIN)/cmocka/build/src -l cmocka
 
 CMOCKA_DIR := $(XCHAIN)/cmocka/include
@@ -92,11 +95,9 @@ test_soup: $(OBJS)
 
 test: test_soup
 	./test_soup $(SOUP_ARGS)
-
-test2: test_soup
-	./tools/test.py ./test_soup $(SOUP_ARGS)
-
+#
 # all
+#
 
 all: soup test_soup
 
