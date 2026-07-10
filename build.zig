@@ -33,7 +33,6 @@ pub fn build(b: *std.Build) void {
         "-Werror",
         "-Wall",
         "-Wextra",
-        "-Wpadded",
     };
 
     // executable
@@ -50,8 +49,14 @@ pub fn build(b: *std.Build) void {
         .flags = flags,
     });
 
-    // system libraries
-    soup.root_module.linkSystemLibrary("sdl3", .{});
+    // dependencies
+    const sdl = b.dependency("sdl", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    soup.root_module.linkLibrary(sdl.artifact("SDL3"));
+
+    // install
     b.installArtifact(soup);
 
     // run step

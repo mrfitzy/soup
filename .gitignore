@@ -1,3 +1,4 @@
+.zig-cache/
 .DS_Store
 *.o
 build.log
@@ -11,5 +12,4 @@ test/test_run.log
 test_soup
 test_soup.dSYM
 third-party/
-.zig-cache/
-
+zig-pkg/
