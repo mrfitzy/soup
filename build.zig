@@ -67,7 +67,12 @@ pub fn build(b: *std.Build) void {
     const sdl_artifact = sdl.artifact("SDL3");
     soup.root_module.linkLibrary(sdl_artifact);
 
-    if (target.result.os.tag == .macos) {
+    if (target.result.os.tag == .macos and b.graph.host.result.os.tag != .macos) {
+        if (b.graph.host.result.os.tag == .windows) {
+            // MacOS SDK paths are incompatible with windows hosts
+            std.log.err("error: cross-compiling for macOS from Windows is not supported", .{});
+            std.process.exit(1);
+        }
         if (b.lazyDependency("macos-sdk", .{
             .target = target,
             .optimize = optimize,

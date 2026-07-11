@@ -9,6 +9,7 @@
         .@"macos-sdk" = .{
             .url = "https://github.com/mrfitzy/macos-sdk/archive/refs/tags/MacOSX26.5.tar.gz",
             .hash = "N-V-__8AABXZoi1yK9SW8QcR29W0IFN6Ov3Gbf_iEUR1ygOc",
+            .lazy = true,
         },
     },
     .paths = .{""},
