@@ -5,7 +5,9 @@
 #include "regs.h"
 
 #include <assert.h>
+#if !defined(_WIN32)
 #include <execinfo.h>
+#endif
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,6 +16,9 @@
 
 void
 print_backtrace(void) {
+#if defined(_WIN32)
+  printf("---backtrace unavailable on this platform---\n");
+#else
   void* callstack[16];
   int frames = backtrace(callstack, 16);
   char** strs = backtrace_symbols(callstack, frames);
@@ -23,6 +28,7 @@ print_backtrace(void) {
   }
   free(strs);
   printf("---backtrace end---\n");
+#endif
 }
 
 void

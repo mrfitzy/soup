@@ -27,13 +27,23 @@ pub fn build(b: *std.Build) void {
     };
 
     // flags
-    const flags = &[_][]const u8{
-        "-std=c23",
-        "-g",
-        "-Werror",
-        "-Wall",
-        "-Wextra",
-    };
+    const flags = if (target.result.os.tag == .macos)
+        &[_][]const u8{
+            "-std=c23",
+            "-g",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wno-error=deprecated-declarations",
+        }
+    else
+        &[_][]const u8{
+            "-std=c23",
+            "-g",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+        };
 
     // executable
     const soup = b.addExecutable(.{
@@ -54,7 +64,30 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    soup.root_module.linkLibrary(sdl.artifact("SDL3"));
+    const sdl_artifact = sdl.artifact("SDL3");
+    soup.root_module.linkLibrary(sdl_artifact);
+
+    if (target.result.os.tag == .macos) {
+        if (b.lazyDependency("macos-sdk", .{
+            .target = target,
+            .optimize = optimize,
+        })) |sdk| {
+            const macos_sdk_framework_dir = sdk.path("MacOSX26.5.sdk/System/Library/Frameworks");
+            soup.root_module.addFrameworkPath(macos_sdk_framework_dir);
+            sdl_artifact.root_module.addFrameworkPath(macos_sdk_framework_dir);
+
+            const macos_sdk_lib_dir = sdk.path("MacOSX26.5.sdk/usr/lib");
+            soup.root_module.addLibraryPath(macos_sdk_lib_dir);
+            sdl_artifact.root_module.addLibraryPath(macos_sdk_lib_dir);
+
+            const macos_sdk_include_dir = sdk.path("MacOSX26.5.sdk/usr/include");
+            soup.root_module.addSystemIncludePath(macos_sdk_include_dir);
+            sdl_artifact.root_module.addSystemIncludePath(macos_sdk_include_dir);
+
+            soup.root_module.linkSystemLibrary("iconv", .{ .use_pkg_config = .no });
+            sdl_artifact.root_module.linkSystemLibrary("iconv", .{ .use_pkg_config = .no });
+        }
+    }
 
     // install
     b.installArtifact(soup);
