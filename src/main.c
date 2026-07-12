@@ -6,11 +6,11 @@
 
 #include <SDL3/SDL.h>
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/errno.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
