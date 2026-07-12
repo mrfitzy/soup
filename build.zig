@@ -27,23 +27,18 @@ pub fn build(b: *std.Build) void {
     };
 
     // flags
-    const flags = if (target.result.os.tag == .macos)
-        &[_][]const u8{
-            "-std=c23",
-            "-g",
-            "-Werror",
-            "-Wall",
-            "-Wextra",
-            "-Wno-error=deprecated-declarations",
-        }
-    else
-        &[_][]const u8{
-            "-std=c23",
-            "-g",
-            "-Werror",
-            "-Wall",
-            "-Wextra",
-        };
+    var flags: std.ArrayList([]const u8) = .empty;
+    flags.appendSlice(b.allocator, &[_][]const u8{
+        "-std=c23",
+        "-g",
+        "-Werror",
+        "-Wall",
+        "-Wextra",
+    }) catch @panic("OOM");
+
+    if (target.result.os.tag == .macos) {
+        flags.append(b.allocator, "-Wno-error=deprecated-declarations") catch @panic("OOM");
+    }
 
     // executable
     const soup = b.addExecutable(.{
@@ -56,7 +51,7 @@ pub fn build(b: *std.Build) void {
     });
     soup.root_module.addCSourceFiles(.{
         .files = soup_sources,
-        .flags = flags,
+        .flags = flags.items,
     });
 
     // dependencies
