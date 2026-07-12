@@ -12,4 +12,5 @@ test/test_run.log
 test_soup
 test_soup.dSYM
 third-party/
+zig-out/
 zig-pkg/

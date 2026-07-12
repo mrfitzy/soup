@@ -1,13 +1,40 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+const BuildError = error{
+    InvalidCrossCompile,
+};
 
-    //
-    // main program
-    //
+fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
+    const tool = b.addExecutable(.{
+        .name = "gen_ops",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/gen_ops.zig"),
+            .target = b.graph.host,
+            .optimize = optimize,
+        }),
+    });
+    const args_dep = b.dependency("args", .{
+        .target = b.graph.host,
+        .optimize = optimize,
+    });
+    tool.root_module.addImport("args", args_dep.module("args"));
+    b.installArtifact(tool);
 
+    // build step
+    const build_step = b.step("tool", "Build gen_ops tool");
+    build_step.dependOn(&b.addInstallArtifact(tool, .{}).step);
+
+    // run step
+    const run_exe = b.addRunArtifact(tool);
+    run_exe.addPrefixedFileArg("--input=", b.path("data/opcodes.html"));
+    run_exe.addPrefixedFileArg("--output=", b.path("data/ops.bin"));
+    run_exe.addPrefixedFileArg("--cb-output=", b.path("data/cb_ops.bin"));
+
+    const run_step = b.step("run_tool", "Run gen_ops tool");
+    run_step.dependOn(&run_exe.step);
+}
+
+fn buildSoup(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
     // sources
     const common_sources = &[_][]const u8{
         "src/apu.c",
@@ -28,16 +55,17 @@ pub fn build(b: *std.Build) void {
 
     // flags
     var flags: std.ArrayList([]const u8) = .empty;
-    flags.appendSlice(b.allocator, &[_][]const u8{
+    defer flags.deinit(b.allocator);
+    try flags.appendSlice(b.allocator, &[_][]const u8{
         "-std=c23",
         "-g",
         "-Werror",
         "-Wall",
         "-Wextra",
-    }) catch @panic("OOM");
+    });
 
     if (target.result.os.tag == .macos) {
-        flags.append(b.allocator, "-Wno-error=deprecated-declarations") catch @panic("OOM");
+        try flags.append(b.allocator, "-Wno-error=deprecated-declarations");
     }
 
     // executable
@@ -66,7 +94,7 @@ pub fn build(b: *std.Build) void {
         if (b.graph.host.result.os.tag == .windows) {
             // MacOS SDK paths are incompatible with windows hosts
             std.log.err("error: cross-compiling for macOS from Windows is not supported", .{});
-            std.process.exit(1);
+            return error.InvalidCrossCompile;
         }
         if (b.lazyDependency("macos-sdk", .{
             .target = target,
@@ -92,6 +120,10 @@ pub fn build(b: *std.Build) void {
     // install
     b.installArtifact(soup);
 
+    // build step
+    const build_step = b.step("soup", "Build soup");
+    build_step.dependOn(&b.addInstallArtifact(soup, .{}).step);
+
     // run step
     const run_exe = b.addRunArtifact(soup);
     run_exe.addFileArg(b.path("data/ops.bin"));
@@ -100,4 +132,15 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "Run soup");
     run_step.dependOn(&run_exe.step);
+}
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    buildTool(b, optimize);
+    buildSoup(b, target, optimize) catch |err| {
+        std.debug.print("error building soup: {}\n", .{err});
+        std.process.exit(1);
+    };
 }

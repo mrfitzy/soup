@@ -11,6 +11,10 @@
             .hash = "N-V-__8AABXZoi1yK9SW8QcR29W0IFN6Ov3Gbf_iEUR1ygOc",
             .lazy = true,
         },
+        .args = .{
+            .url = "https://github.com/muhammad-fiaz/args.zig/archive/refs/tags/0.0.7.tar.gz",
+            .hash = "args-0.0.7-8hzgbvPiCAAcEM4R90pCppGhHBKi0Uiw90tbGvipjVfc",
+        },
     },
     .paths = .{""},
     .fingerprint = 0x1908a0fc16c1743f,
