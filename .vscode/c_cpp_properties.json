@@ -11,7 +11,7 @@
             ],
             "defines": [],
             "compilerPath": "${workspaceFolder}/../xchain/third-party/zig/zig cc",
-            "cStandard": "c17",
+            "cStandard": "c23",
             "cppStandard": "c++14",
             "intelliSenseMode": "macos-clang-arm64",
             "configurationProvider": "ms-vscode.makefile-tools"

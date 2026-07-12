@@ -12,7 +12,11 @@ fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
             .target = b.graph.host,
             .optimize = optimize,
         }),
+        .use_llvm = true,
     });
+    tool.root_module.addIncludePath(b.path("src/"));
+
+    // deps
     const args_dep = b.dependency("args", .{
         .target = b.graph.host,
         .optimize = optimize,

@@ -21,6 +21,21 @@
             "args": ["data/ops.bin", "data/cb_ops.bin", "data/DMG_ROM.bin"],
             "expressions": "native",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "gen_ops",
+            "program": "zig-out/bin/gen_ops",
+            "args": [
+                "--input=data/opcodes.html",
+                "--output=data/zig_ops.bin",
+                "--cb-output=data/zig_cb_ops.bin"
+            ],
+            "expressions": "native",
+            "cwd": "${workspaceFolder}",
+            "sourceLanguages": ["cpp"],
+            "preLaunchTask": "build tool"
         }
     ]
 }
