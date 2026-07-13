@@ -16,6 +16,9 @@
 
 #define ARG_COUNT (3)
 
+extern const struct op* ops_data;
+extern const struct op* cb_ops_data;
+
 static const void*
 map_file(const char* path, size_t size) {
   int fd = open(path, O_RDONLY);
@@ -68,8 +71,8 @@ main(int argc, char** argv) {
     fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
     return 1;
   }
-  const struct op* ops = map_file(args.ops_path, OPS_BIN_SIZE);
-  const struct op* cb_ops = map_file(args.cb_ops_path, OPS_BIN_SIZE);
+  const struct op* ops = ops_data;
+  const struct op* cb_ops = cb_ops_data;
   const uint8_t* rom = map_file(args.rom_path, DMG_ROM_SIZE);
   if (print) {
     print_rom(ops, cb_ops, rom, 0xa8);

@@ -4,7 +4,7 @@ const BuildError = error{
     InvalidCrossCompile,
 };
 
-fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
+fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) [2]std.Build.LazyPath {
     const tool = b.addExecutable(.{
         .name = "gen_ops",
         .root_module = b.createModule(.{
@@ -12,7 +12,6 @@ fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
             .target = b.graph.host,
             .optimize = optimize,
         }),
-        .use_llvm = true,
     });
     tool.root_module.addIncludePath(b.path("src/"));
 
@@ -22,7 +21,6 @@ fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
         .optimize = optimize,
     });
     tool.root_module.addImport("args", args_dep.module("args"));
-    b.installArtifact(tool);
 
     // build step
     const build_step = b.step("tool", "Build gen_ops tool");
@@ -31,16 +29,34 @@ fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) void {
     // run step
     const run_exe = b.addRunArtifact(tool);
     run_exe.addPrefixedFileArg("--input=", b.path("data/opcodes.html"));
-    run_exe.addPrefixedFileArg("--output=", b.path("data/ops.bin"));
-    run_exe.addPrefixedFileArg("--cb-output=", b.path("data/cb_ops.bin"));
+    const ops = run_exe.addPrefixedOutputFileArg("--output=", "ops.bin");
+    const cb_ops = run_exe.addPrefixedOutputFileArg("--cb-output=", "cb_ops.bin");
 
     const run_step = b.step("run_tool", "Run gen_ops tool");
     run_step.dependOn(&run_exe.step);
+
+    return .{ ops, cb_ops };
 }
 
-fn buildSoup(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+fn buildOpsLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPath, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+    const lib = b.addLibrary(.{
+        .name = "ops",
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("data/ops.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    lib.root_module.addIncludePath(b.path("src/"));
+    lib.root_module.addAnonymousImport("c_ops", .{ .root_source_file = ops });
+    lib.root_module.addAnonymousImport("c_cb_ops", .{ .root_source_file = cb_ops });
+    return lib;
+}
+
+fn buildSoup(b: *std.Build, ops_lib: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
     // sources
-    const common_sources = &[_][]const u8{
+    const common_c_sources = &[_][]const u8{
         "src/apu.c",
         "src/args.c",
         "src/diag.c",
@@ -52,7 +68,7 @@ fn buildSoup(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.buil
         "src/op.c",
         "src/regs.c",
     };
-    const soup_sources = common_sources ++ .{
+    const soup_c_sources = common_c_sources ++ .{
         "src/main.c",
         "src/ui_loop.c",
     };
@@ -82,11 +98,13 @@ fn buildSoup(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.buil
         }),
     });
     soup.root_module.addCSourceFiles(.{
-        .files = soup_sources,
+        .files = soup_c_sources,
         .flags = flags.items,
     });
 
     // dependencies
+    soup.root_module.linkLibrary(ops_lib);
+
     const sdl = b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
@@ -142,8 +160,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    buildTool(b, optimize);
-    buildSoup(b, target, optimize) catch |err| {
+    const ops, const cb_ops = buildTool(b, optimize);
+    const ops_lib = buildOpsLib(b, ops, cb_ops, target, optimize);
+    buildSoup(b, ops_lib, target, optimize) catch |err| {
         std.debug.print("error building soup: {}\n", .{err});
         std.process.exit(1);
     };

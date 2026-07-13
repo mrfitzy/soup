@@ -160,7 +160,7 @@ fn writeOpsBin(io: std.Io, ops: []const Op, ops_out_path: []const u8) !void {
     try w.flush();
 }
 
-fn createOpMetadata(allocator: std.mem.Allocator, io: std.Io, html_path: []const u8, ops_out_path: []const u8, cb_ops_out_path: []const u8) !void {
+fn genOps(allocator: std.mem.Allocator, io: std.Io, html_path: []const u8, ops_out_path: []const u8, cb_ops_out_path: []const u8) !void {
     // read html
     const html = try std.Io.Dir.cwd().readFileAlloc(io, html_path, allocator, .unlimited);
     defer allocator.free(html);
@@ -214,8 +214,10 @@ pub fn main(init: std.process.Init) !void {
     const output = my_args.getString("output") orelse "ops.bin";
     const cb_output = my_args.getString("cb-output") orelse "cb_ops.bin";
 
-    createOpMetadata(allocator, init.io, input, output, cb_output) catch |err| {
+    genOps(allocator, init.io, input, output, cb_output) catch |err| {
         std.debug.print("error generating ops data: {}\n", .{err});
         std.process.exit(1);
     };
+
+    return std.process.cleanExit(init.io);
 }
