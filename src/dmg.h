@@ -1,43 +1,27 @@
 #pragma once
 
 #include "apu.h"
+#include "cpu.h"
 #include "display.h"
 #include "lcdc.h"
 #include "mem.h"
-#include "op.h"
-#include "regs.h"
 
 #include <unistd.h>
 
-#pragma clang diagnostic ignored "-Wpadded"
 struct dmg_system {
-  struct regs regs;
+  struct cpu cpu;
   struct mem mem;
   struct lcdc lcdc;
   struct apu apu;
   struct display* display;
-  const struct op* ops;
-  const struct op* cb_ops;
-  const uint8_t* rom;
-  size_t rom_size;
 };
 
-void dmg_init(
-  struct dmg_system* dmg,
-  const struct op* ops,
-  const struct op* cb_ops,
-  const uint8_t* rom,
-  size_t rom_size);
+void dmg_init(struct dmg_system*);
 
-void dmg_create_display(struct dmg_system* dmg);
+void dmg_create_display(struct dmg_system*);
 
-void dmg_destroy_display(struct dmg_system* dmg);
+void dmg_destroy_display(struct dmg_system*);
 
-void dmg_emulate_rom(struct dmg_system* dmg);
-
-const struct op* dmg_get_op(
-  const struct dmg_system* dmg,
-  const struct op** cb_op_out);
+void dmg_on(struct dmg_system*);
 
 uint8_t dmg_get_logo(uint16_t offset);
-

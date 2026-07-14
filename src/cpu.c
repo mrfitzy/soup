@@ -1,12 +1,35 @@
-#include "emulate.h"
+#include "cpu.h"
 
 #include "bits.h"
 #include "diag.h"
-#include "dmg.h"
+#include "mem.h"
+#include "op.h"
 
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
+
+extern const struct op* ops_data;
+extern const struct op* cb_ops_data;
+
+static inline const struct op*
+get_op(const struct cpu* cpu, const struct op** cb_op_out) {
+  uint16_t pc = cpu->regs.pc;
+  size_t rom_size = cpu->rom_size;
+  assert(pc < rom_size);
+  const uint8_t* rom = cpu->rom;
+  uint8_t opcode = rom[pc];
+  if (opcode != 0xcb) {
+    *cb_op_out = NULL;
+  } else {
+    pc++;
+    assert(pc < rom_size);
+    *cb_op_out = cb_ops_data + rom[pc];
+  }
+
+  return ops_data + opcode;
+}
 
 static inline void
 regs_update_pc(struct regs* regs, const struct op* op) {
@@ -541,14 +564,14 @@ emulate_ld_d16_a(
 }
 
 void
-emulate_instruction(struct dmg_system* dmg) {
+cpu_execute_instruction(struct cpu* cpu) {
   const struct op* cb_op;
-  const struct op* op = dmg_get_op(dmg, &cb_op);
+  const struct op* op = get_op(cpu, &cb_op);
   uint8_t opcode = op->opcode;
-  struct regs* regs = &dmg->regs;
-  struct mem* mem = &dmg->mem;
-  const uint8_t* rom = dmg->rom + regs->pc;
-  size_t rom_size = dmg->rom_size - regs->pc;
+  struct regs* regs = &cpu->regs;
+  struct mem* mem = cpu->mem;
+  const uint8_t* rom = cpu->rom + regs->pc;
+  size_t rom_size = cpu->rom_size - regs->pc;
   uint8_t prev_a = regs->a;
   bool handled = true;
   bool pc_handled = false;
@@ -651,3 +674,10 @@ post_op:
   fflush(stdout);
 }
 
+void
+cpu_init(struct cpu* cpu, struct mem* mem, const uint8_t* rom, size_t rom_size) {
+  regs_init(&cpu->regs);
+  cpu->mem = mem;
+  cpu->rom = rom;
+  cpu->rom_size = rom_size;
+}

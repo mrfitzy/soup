@@ -58,10 +58,10 @@ fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, target: std.Build
     // sources
     const common_c_sources = &[_][]const u8{
         "src/apu.c",
+        "src/cpu.c",
         "src/diag.c",
         "src/display.c",
         "src/dmg.c",
-        "src/emulate.c",
         "src/lcdc.c",
         "src/mem.c",
         "src/op.c",
