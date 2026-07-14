@@ -48,7 +48,6 @@ fn buildOpsLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPat
             .optimize = optimize,
         }),
     });
-    lib.root_module.addIncludePath(b.path("src/"));
     lib.root_module.addAnonymousImport("c_ops", .{ .root_source_file = ops });
     lib.root_module.addAnonymousImport("c_cb_ops", .{ .root_source_file = cb_ops });
     return lib;
