@@ -31,14 +31,6 @@ print_backtrace(void) {
 #endif
 }
 
-void
-print_data(const uint8_t* data, size_t length) {
-  printf("%02X", *data);
-  for (size_t i = 1; i < length; i++)
-    printf("%c%02X", (((i % 16 == 0) && (i != 0)) ? '\n' : ' '), data[i]);
-  printf("\n");
-}
-
 typedef uint64_t half_row_size_t;
 
 void print_mem(const struct mem* mem) {
@@ -121,26 +113,6 @@ print_regs(const struct regs* regs) {
   printf("PC: %04x\n", regs->pc);
   printf("SP: %04x\n", regs->sp);
   printf("z:%d n:%d h:%d c:%d (%x)\n", f->z, f->n, f->h, f->c, f->val);
-}
-
-void
-print_rom(
-    const struct op* ops,
-    const struct op* cb_ops,
-    const uint8_t* rom,
-    size_t rom_size) {
-  const uint8_t* pc = rom;
-  while (pc < rom + rom_size) {
-    const uint8_t opcode = *pc;
-    const struct op* op = (opcode == 0xcb ? cb_ops + *(pc + 1) : ops + opcode);
-    if (op->length == 0) {
-      fprintf(stderr, "unsupported opcode:\n");
-      print_op(op);
-      assert(false);
-    }
-    printf("%s (len %d)\n", op->text, op->length);
-    pc += op->length;
-  }
 }
 
 static inline size_t

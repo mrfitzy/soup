@@ -13,8 +13,6 @@ struct regs;
 
 void print_backtrace(void);
 
-void print_data(const uint8_t* data, size_t length);
-
 void print_mem(const struct mem* mem);
 
 void mem_copy_row(const struct mem* mem, int row, uint8_t* buf, size_t buf_size);
@@ -22,12 +20,6 @@ void mem_copy_row(const struct mem* mem, int row, uint8_t* buf, size_t buf_size)
 void print_op(const struct op* op);
 
 void print_regs(const struct regs* regs);
-
-void print_rom(
-    const struct op* ops,
-    const struct op* cb_ops,
-    const uint8_t* rom,
-    size_t rom_size);
 
 // @returns next pc for iterating rom; 0 for EOF
 uint16_t rom_to_str(

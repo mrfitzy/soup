@@ -1,5 +1,4 @@
-#include "args.h"
-#include "diag.h"
+#include "dmg.h"
 #include "emulate.h"
 #include "op.h"
 #include "ui.h"
@@ -11,32 +10,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/mman.h>
 #include <unistd.h>
-
-#define ARG_COUNT (3)
 
 extern const struct op* ops_data;
 extern const struct op* cb_ops_data;
-
-static const void*
-map_file(const char* path, size_t size) {
-  int fd = open(path, O_RDONLY);
-  assert(fd != -1);
-
-  const void* data = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0 /* offset */);
-  if (data == MAP_FAILED) {
-    perror(NULL);
-    assert(false);
-  }
-
-  return data;
-}
-
-static void
-print_usage(const char* progname) {
-  fprintf(stderr, "%s [-p] ops.bin cb_ops.bin dmg_rom.bin\n", progname);
-}
+extern const uint8_t* boot_rom_data;
+extern const size_t boot_rom_size;
 
 static int
 emulate_rom(void* data) {
@@ -45,44 +24,13 @@ emulate_rom(void* data) {
 }
 
 int
-main(int argc, char** argv) {
-  if (argc < ARG_COUNT + 1) {
-    fprintf(stderr, "error: missing arguments\n");
-    print_usage(argv[0]);
-    return 1;
-  }
-  bool print = false;
-  int c;
-  while ((c = getopt(argc, argv, "p")) != -1) {
-    switch (c) {
-      case 'p':
-        print = true;
-        break;
-      case '?':
-        fprintf(stderr, "error: invalid argument '%c'", optopt);
-        print_usage(argv[0]);
-        return 1;
-    }
-  }
-  argc -= optind;
-  argv += optind;
-  struct soup_args args;
-  if (!soup_args_from_argv(argc, argv, &args)) {
-    fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
-    return 1;
-  }
+main(void) {
   const struct op* ops = ops_data;
   const struct op* cb_ops = cb_ops_data;
-  const uint8_t* rom = map_file(args.rom_path, DMG_ROM_SIZE);
-  if (print) {
-    print_rom(ops, cb_ops, rom, 0xa8);
-    print_data(rom + 0xa8, 0xe0 - 0xa8);
-    print_rom(ops, cb_ops, rom + 0xe0, DMG_ROM_SIZE - 0xe0);
-    return 0;
-  }
+  const uint8_t* rom = boot_rom_data;
 
   struct dmg_system dmg;
-  dmg_init(&dmg, ops, cb_ops, rom, DMG_ROM_SIZE);
+  dmg_init(&dmg, ops, cb_ops, rom, boot_rom_size);
 
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
     fprintf(stderr, "error: SDL_Init(): %s\n", SDL_GetError());

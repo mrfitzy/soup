@@ -38,26 +38,26 @@ fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) [2]std.Build.Laz
     return .{ ops, cb_ops };
 }
 
-fn buildOpsLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPath, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+fn buildDataLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPath, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
     const lib = b.addLibrary(.{
-        .name = "ops",
+        .name = "dmg_data",
         .linkage = .static,
         .root_module = b.createModule(.{
-            .root_source_file = b.path("data/ops.zig"),
+            .root_source_file = b.path("data/dmg.zig"),
             .target = target,
             .optimize = optimize,
         }),
     });
     lib.root_module.addAnonymousImport("c_ops", .{ .root_source_file = ops });
     lib.root_module.addAnonymousImport("c_cb_ops", .{ .root_source_file = cb_ops });
+    lib.root_module.addAnonymousImport("boot_rom", .{ .root_source_file = b.path("data/DMG_ROM.bin") });
     return lib;
 }
 
-fn buildSoup(b: *std.Build, ops_lib: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
     // sources
     const common_c_sources = &[_][]const u8{
         "src/apu.c",
-        "src/args.c",
         "src/diag.c",
         "src/display.c",
         "src/dmg.c",
@@ -102,7 +102,7 @@ fn buildSoup(b: *std.Build, ops_lib: *std.Build.Step.Compile, target: std.Build.
     });
 
     // dependencies
-    soup.root_module.linkLibrary(ops_lib);
+    soup.root_module.linkLibrary(data_lib);
 
     const sdl = b.dependency("sdl", .{
         .target = target,
@@ -147,10 +147,6 @@ fn buildSoup(b: *std.Build, ops_lib: *std.Build.Step.Compile, target: std.Build.
 
     // run step
     const run_exe = b.addRunArtifact(soup);
-    run_exe.addFileArg(b.path("data/ops.bin"));
-    run_exe.addFileArg(b.path("data/cb_ops.bin"));
-    run_exe.addFileArg(b.path("data/DMG_ROM.bin"));
-
     const run_step = b.step("run", "Run soup");
     run_step.dependOn(&run_exe.step);
 }
@@ -160,8 +156,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const ops, const cb_ops = buildTool(b, optimize);
-    const ops_lib = buildOpsLib(b, ops, cb_ops, target, optimize);
-    buildSoup(b, ops_lib, target, optimize) catch |err| {
+    const data_lib = buildDataLib(b, ops, cb_ops, target, optimize);
+    buildSoup(b, data_lib, target, optimize) catch |err| {
         std.debug.print("error building soup: {}\n", .{err});
         std.process.exit(1);
     };
