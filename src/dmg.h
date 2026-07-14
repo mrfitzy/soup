@@ -16,11 +16,15 @@ struct dmg_system {
   struct display* display;
 };
 
+enum dmg_init_options {
+  DMG_INIT_NO_DISPLAY = 0x1,
+};
+
 void dmg_init(struct dmg_system*);
 
-void dmg_create_display(struct dmg_system*);
+void dmg_init_with_options(struct dmg_system*, enum dmg_init_options);
 
-void dmg_destroy_display(struct dmg_system*);
+void dmg_destroy(struct dmg_system*);
 
 void dmg_on(struct dmg_system*);
 

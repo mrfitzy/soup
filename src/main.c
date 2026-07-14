@@ -19,9 +19,8 @@ main(void) {
 
   struct dmg_system dmg;
   dmg_init(&dmg);
-  dmg_create_display(&dmg);
   int rc = ui_run(run_dmg, &dmg);
-  dmg_destroy_display(&dmg);
+  dmg_destroy(&dmg);
 
   SDL_Quit();
   return rc;
