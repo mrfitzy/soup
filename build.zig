@@ -13,7 +13,7 @@ fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) [2]std.Build.Laz
             .optimize = optimize,
         }),
     });
-    tool.root_module.addIncludePath(b.path("src/"));
+    tool.root_module.addIncludePath(b.path("include"));
 
     // deps
     const args_dep = b.dependency("args", .{
@@ -100,6 +100,7 @@ fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, target: std.Build
         .files = soup_c_sources,
         .flags = flags.items,
     });
+    soup.root_module.addIncludePath(b.path("include"));
 
     // dependencies
     soup.root_module.linkLibrary(data_lib);
