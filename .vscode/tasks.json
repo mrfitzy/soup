@@ -2,6 +2,16 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "build soup",
+            "type": "shell",
+            "command": "zig build soup",
+            "group": {
+                "kind": "build",
+                "isDefault": true,
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "build tool",
             "type": "shell",
             "command": "zig build tool",

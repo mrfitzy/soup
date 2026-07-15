@@ -31,7 +31,7 @@ dmg_init_with_options(struct dmg_system* dmg, enum dmg_init_options init_options
   dmg->display = NULL;
 
   assert(boot_rom_size <= dmg->mem.size);
-  memcpy(&dmg->mem.mem, boot_rom_data, boot_rom_size);
+  memcpy(dmg->mem.mem, boot_rom_data, boot_rom_size);
 
   if (!(init_options & DMG_INIT_NO_DISPLAY)) {
     create_display(dmg);

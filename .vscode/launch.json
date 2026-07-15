@@ -8,10 +8,10 @@
             "type": "lldb",
             "request": "launch",
             "name": "soup",
-            "program": "${workspaceFolder}/soup",
-            "args": ["data/ops.bin", "data/cb_ops.bin", "data/DMG_ROM.bin"],
+            "program": "${workspaceFolder}/zig-out/bin/soup",
             "expressions": "native",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build soup"
         },
         {
             "type": "lldb",
