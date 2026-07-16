@@ -11,6 +11,9 @@
 
 #include <inttypes.h>
 
+extern const struct op* ops_data;
+extern const struct op* cb_ops_data;
+
 static void
 draw_regs_window(const struct regs* regs) {
     const struct flags* f = &regs->f;
@@ -42,15 +45,15 @@ draw_code_window(const struct dmg_system* dmg) {
 
     char buf[256];
     uint16_t next_pc = 0;
-    for (uint16_t pc = 0; pc < dmg->rom_size; pc = next_pc) {
+    for (uint16_t pc = 0; pc < dmg->cpu.rom_size; pc = next_pc) {
       next_pc = rom_to_str(
-          dmg->ops, dmg->cb_ops, pc, dmg->rom, dmg->rom_size, buf, sizeof(buf));
+          ops_data, cb_ops_data, pc, dmg->cpu.rom, dmg->cpu.rom_size, buf, sizeof(buf));
       if (next_pc == 0) {
         break;
       }
       ImGui::TableNextRow();
       ImGui::TableNextColumn();
-      if (pc == dmg->regs.pc) {
+      if (pc == dmg->cpu.regs.pc) {
         ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlight);
         if (s_center) {
           ImGui::SetScrollHereY(0.5f);
@@ -288,7 +291,7 @@ void
 ui_update(void* data) {
   struct debug_args* debug = (struct debug_args*)data;
   const struct dmg_system* dmg = &debug->dmg;
-  const struct regs* regs = &dmg->regs;
+  const struct regs* regs = &dmg->cpu.regs;
   const struct mem* mem = &dmg->mem;
 
   draw_regs_window(regs);

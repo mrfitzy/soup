@@ -54,7 +54,17 @@ fn buildDataLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPa
     return lib;
 }
 
-fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !*std.Build.Step.Compile {
+    // executable
+    const soup = b.addExecutable(.{
+        .name = exe_name,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+
     // sources
     const common_c_sources = &[_][]const u8{
         "src/apu.c",
@@ -67,38 +77,9 @@ fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, target: std.Build
         "src/op.c",
         "src/regs.c",
     };
-    const soup_c_sources = common_c_sources ++ .{
-        "src/main.c",
-        "src/ui_loop.c",
-    };
-
-    // flags
-    var flags: std.ArrayList([]const u8) = .empty;
-    defer flags.deinit(b.allocator);
-    try flags.appendSlice(b.allocator, &[_][]const u8{
-        "-std=c23",
-        "-g",
-        "-Werror",
-        "-Wall",
-        "-Wextra",
-    });
-
-    if (target.result.os.tag == .macos) {
-        try flags.append(b.allocator, "-Wno-error=deprecated-declarations");
-    }
-
-    // executable
-    const soup = b.addExecutable(.{
-        .name = "soup",
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
     soup.root_module.addCSourceFiles(.{
-        .files = soup_c_sources,
-        .flags = flags.items,
+        .files = common_c_sources,
+        .flags = c_flags,
     });
     soup.root_module.addIncludePath(b.path("include"));
 
@@ -139,6 +120,21 @@ fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, target: std.Build
         }
     }
 
+    return soup;
+}
+
+fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+    const soup = try createEmulatorExe(b, "soup", data_lib, c_flags, target, optimize);
+
+    // additional soup sources
+    soup.root_module.addCSourceFiles(.{
+        .files = &.{
+            "src/main.c",
+            "src/ui_loop.c",
+        },
+        .flags = c_flags,
+    });
+
     // install
     b.installArtifact(soup);
 
@@ -152,14 +148,104 @@ fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, target: std.Build
     run_step.dependOn(&run_exe.step);
 }
 
+pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+    // kitchen debugger executable
+    const kitchen = try createEmulatorExe(b, "kitchen", data_lib, c_flags, target, optimize);
+
+    // additional kitchen sources
+    kitchen.root_module.addCSourceFiles(.{
+        .files = &.{
+            "test/signal_handler.c",
+            "test/test.c",
+            "test/test_main.c",
+            "test/test_shims.c",
+            "test/test_shims_proof.c",
+        },
+        .flags = c_flags,
+    });
+    kitchen.root_module.addIncludePath(b.path("test"));
+
+    const cpp_flags = &.{
+        "-std=c++11",
+        "-Wall",
+        "-Wformat",
+    };
+    kitchen.root_module.addCSourceFiles(.{
+        .files = &.{
+            "test/ui_loop_dbg.cpp",
+            "ui/tile.cpp",
+            "ui/ui.cpp",
+        },
+        .flags = cpp_flags,
+    });
+    kitchen.root_module.link_libcpp = true;
+
+    // additional dependencies
+    kitchen.root_module.addLibraryPath(b.path("../xchain/third-party/cmocka/build/src"));
+    kitchen.root_module.addIncludePath(b.path("../xchain/third-party/cmocka/include"));
+    kitchen.root_module.linkSystemLibrary("cmocka", .{ .use_pkg_config = .no });
+
+    kitchen.root_module.addCSourceFiles(.{
+        .files = &.{
+            "../imgui/backends/imgui_impl_sdl3.cpp",
+            "../imgui/backends/imgui_impl_sdlrenderer3.cpp",
+            "../imgui/imgui.cpp",
+            "../imgui/imgui_demo.cpp",
+            "../imgui/imgui_draw.cpp",
+            "../imgui/imgui_tables.cpp",
+            "../imgui/imgui_widgets.cpp",
+        },
+        .flags = cpp_flags,
+    });
+    kitchen.root_module.addIncludePath(b.path("../imgui"));
+    kitchen.root_module.addIncludePath(b.path("../imgui/backends"));
+
+    // install
+    b.installArtifact(kitchen);
+
+    // build step
+    const build_step = b.step("kitchen", "Build kitchen");
+    build_step.dependOn(&b.addInstallArtifact(kitchen, .{}).step);
+
+    // run step
+    const run_exe = b.addRunArtifact(kitchen);
+    const run_step = b.step("debug", "Run kitchen");
+    run_step.dependOn(&run_exe.step);
+}
+
+pub fn default_c_flags(b: *std.Build, target: std.Build.ResolvedTarget) !std.ArrayList([]const u8) {
+    var flags: std.ArrayList([]const u8) = .empty;
+    try flags.appendSlice(b.allocator, &[_][]const u8{
+        "-std=c23",
+        "-g",
+        "-Werror",
+        "-Wall",
+        "-Wextra",
+    });
+    if (target.result.os.tag == .macos) {
+        try flags.append(b.allocator, "-Wno-error=deprecated-declarations");
+    }
+    return flags;
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const ops, const cb_ops = buildTool(b, optimize);
     const data_lib = buildDataLib(b, ops, cb_ops, target, optimize);
-    buildSoup(b, data_lib, target, optimize) catch |err| {
+
+    var c_flags = default_c_flags(b, target) catch |err| {
+        std.debug.print("error generating cflags: {}\n", .{err});
+        std.process.exit(1);
+    };
+    defer c_flags.deinit(b.allocator);
+
+    buildSoup(b, data_lib, c_flags.items, target, optimize) catch |err| {
         std.debug.print("error building soup: {}\n", .{err});
         std.process.exit(1);
+    };
+    buildKitchen(b, data_lib, c_flags.items, target, optimize) catch |err| {
+        std.debug.print("error building kitchen: {}\n", .{err});
     };
 }

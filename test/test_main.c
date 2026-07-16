@@ -1,9 +1,7 @@
-#include "args.h"
 #include "bits.h"
 #include "diag.h"
 #include "display.h"
 #include "dmg.h"
-#include "emulate.h"
 #include "signal_handler.h"
 #include "test.h"
 #include "debug_args.h"
@@ -14,22 +12,9 @@
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/mman.h>
 #include <SDL3/SDL.h>
 
-static const void*
-map_file(const char* path, size_t size) {
-  int fd = open(path, O_RDONLY);
-  assert_true(fd != -1);
-
-  const void* data = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0 /* offset */);
-  if (data == MAP_FAILED) {
-    perror(NULL);
-    assert_true(false);
-  }
-
-  return data;
-}
+extern const size_t boot_rom_size;
 
 static void
 assert_mem_equal(const struct mem* a, const struct mem* b) {
@@ -132,13 +117,10 @@ assert_regs_equal(const struct regs* a, const struct regs* b) {
 
 static void
 assert_dmg_equal(const struct dmg_system* a, const struct dmg_system* b) {
-  assert_regs_equal(&a->regs, &b->regs);
+  assert_regs_equal(&a->cpu.regs, &b->cpu.regs);
   assert_mem_equal(&a->mem, &b->mem);
 }
 
-static const struct op* g_ops;
-static const struct op* g_cb_ops;
-static const uint8_t* g_rom;
 static struct debug_args* g_debug;
 
 static void
@@ -150,7 +132,7 @@ emulate_instruction_for_test(struct dmg_system* dmg) {
       exit(0);
     }
   }
-  emulate_instruction(dmg);
+  cpu_execute_instruction(&dmg->cpu);
 }
 
 static void
@@ -197,8 +179,8 @@ test_emulate_boot_rom(void** state) {
 
   struct dmg_system e;
   struct dmg_system* expect = &e;
-  dmg_init(expect, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
-  struct regs* regs = &expect->regs;
+  dmg_init_with_options(expect, DMG_INIT_NO_DISPLAY);
+  struct regs* regs = &expect->cpu.regs;
   struct flags* flags = &regs->f;
   uint8_t* mem = expect->mem.mem;
 
@@ -539,7 +521,7 @@ test_emulate_boot_rom(void** state) {
       (2 + addr_0095_func + 1 + (addr_0095_func - 1) + 4);
   const int n = 0x2f; // 0x0134 - 0x104 + 1 - 1
   for (int i = 0; i < n; i++) {
-    printf("%04x\n", actual->regs.de);
+    printf("%04x\n", actual->cpu.regs.de);
     for (int j = 0; j < addr_0027_loop; j++) {
       emulate_instruction_for_test(actual);
     }
@@ -554,14 +536,14 @@ test_emulate_boot_rom(void** state) {
     mem[0x8016 + (8 * (i + 1))] = convert_logo(dmg_get_logo(i + 1), lo);
 
     // not tested (loop/function local variables):
-    regs->af = actual->regs.af;
-    regs->bc = actual->regs.bc;
+    regs->af = actual->cpu.regs.af;
+    regs->bc = actual->cpu.regs.bc;
     mem[0xfffb] = actual->mem.mem[0xfffb];
     mem[0xfffa] = actual->mem.mem[0xfffa];
 
     assert_dmg_equal(expect, actual);
   }
-  print_regs(&actual->regs);
+  print_regs(&actual->cpu.regs);
 
   // LD DE,$00d8
   regs->de = 0x00d8;
@@ -788,7 +770,7 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
   // fast-forward through LY loop starting at 0060
-  while (actual->regs.pc != 0x0070) {
+  while (actual->cpu.regs.pc != 0x0070) {
     emulate_instruction_for_test(actual);
   }
   regs->a = 0x90;
@@ -886,7 +868,7 @@ test_emulate_boot_rom(void** state) {
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
   // fast-forward until sound #1 @ 0x0080
-  while (actual->regs.pc != 0x0080) {
+  while (actual->cpu.regs.pc != 0x0080) {
     emulate_instruction_for_test(actual);
   }
   mem[0xff42] = 0x03;
@@ -969,7 +951,7 @@ test_emulate_boot_rom(void** state) {
   //g_debug->step = true;
 
   // fast-forward through remaining iters
-  while (actual->regs.pc < DMG_ROM_SIZE) {
+  while (actual->cpu.regs.pc < boot_rom_size) {
     emulate_instruction_for_test(actual);
   }
 }
@@ -982,24 +964,13 @@ test_thread(void* data) {
 }
 
 int
-main(int argc, char** argv) {
-  argc--;
-  argv++;
-  struct debug_args args;
-  if (!soup_args_from_argv(argc, argv, &args.soup_args)) {
-    fprintf(stderr, "error: unexpected arg count (%d)\n", argc);
-    return 1;
-  }
-  g_ops = map_file(args.soup_args.ops_path, OPS_BIN_SIZE);
-  g_cb_ops = map_file(args.soup_args.cb_ops_path, OPS_BIN_SIZE);
-  g_rom = map_file(args.soup_args.rom_path, DMG_ROM_SIZE);
-
-  dmg_init(&args.dmg, g_ops, g_cb_ops, g_rom, DMG_ROM_SIZE);
-
+main(void) {
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
     fprintf(stderr, "error: SDL_Init(): %s\n", SDL_GetError());
     return 1;
   }
+
+  struct debug_args args;
   args.sem = SDL_CreateSemaphore(0);
   if (args.sem == NULL) {
     fprintf(stderr, "error: SDL_CreateSemaphore failed: %s\n", SDL_GetError());
@@ -1009,12 +980,11 @@ main(int argc, char** argv) {
 
   signal_handler_run();
 
-  dmg_create_display(&args.dmg);
+  dmg_init(&args.dmg);
   int rc = ui_run(test_thread, &args);
-  dmg_destroy_display(&args.dmg);
+  dmg_destroy(&args.dmg);
 
   SDL_DestroySemaphore(args.sem);
   SDL_Quit();
-
   return rc;
 }
