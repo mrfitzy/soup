@@ -1,16 +1,5 @@
-.zig-cache/
 .DS_Store
-*.o
-build.log
-build/
-errors.err
-imgui.ini
-out.txt
-soup
-soup.dSYM
-test/test_run.log
-test_soup
-test_soup.dSYM
+.zig-cache/
 third-party/
 zig-out/
 zig-pkg/
