@@ -158,8 +158,6 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
             "test/signal_handler.c",
             "test/test.c",
             "test/test_main.c",
-            "test/test_shims.c",
-            "test/test_shims_proof.c",
         },
         .flags = c_flags,
     });
@@ -179,6 +177,18 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
         .flags = cpp_flags,
     });
     kitchen.root_module.link_libcpp = true;
+
+    // test utils from zig
+    const lib = b.addLibrary(.{
+        .name = "souptest",
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/test.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    kitchen.root_module.linkLibrary(lib);
 
     // additional dependencies
     kitchen.root_module.addLibraryPath(b.path("../xchain/third-party/cmocka/build/src"));
