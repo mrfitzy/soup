@@ -23,7 +23,8 @@ assert_mem_equal(const struct mem* a, const struct mem* b) {
   assert_int_equal(a->size, b->size);
   assert_int_equal(a->max_addr, b->max_addr);
   assert_memory_equal(a->mem, b->mem, REG_LY);
-  assert_memory_equal(a->mem + REG_LY + 1, b->mem + REG_LY + 1, a->size - REG_LY - 1);
+  assert_memory_equal(
+      a->mem + REG_LY + 1, b->mem + REG_LY + 1, a->size - REG_LY - 1);
 }
 
 static inline void

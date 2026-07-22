@@ -565,6 +565,18 @@ emulate_ld_d16_a(
 }
 
 void
+cpu_init(
+    struct cpu* cpu,
+    struct mem* mem,
+    const uint8_t* rom,
+    size_t rom_size) {
+  regs_init(&cpu->regs);
+  cpu->mem = mem;
+  cpu->rom = rom;
+  cpu->rom_size = rom_size;
+}
+
+void
 cpu_execute_instruction(struct cpu* cpu) {
   const struct op* cb_op;
   const struct op* op = get_op(cpu, &cb_op);
@@ -613,6 +625,9 @@ cpu_execute_instruction(struct cpu* cpu) {
     break;
   case 0xea:
     emulate_ld_d16_a(regs, mem, rom, rom_size);
+    break;
+  case 0xbe:
+    emulate_cp_hl(regs, mem, rom, rom_size);
     break;
   case 0xfe:
     emulate_cp_d8(regs, rom, rom_size);
@@ -673,12 +688,4 @@ post_op:
   regs_mark_all_flags_clean(regs);
   fflush(stderr);
   fflush(stdout);
-}
-
-void
-cpu_init(struct cpu* cpu, struct mem* mem, const uint8_t* rom, size_t rom_size) {
-  regs_init(&cpu->regs);
-  cpu->mem = mem;
-  cpu->rom = rom;
-  cpu->rom_size = rom_size;
 }
