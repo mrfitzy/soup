@@ -1,6 +1,7 @@
 #pragma once
 
-#include <assert.h>
+#include "assert.h"
+
 #include <stdint.h>
 
 static inline uint8_t nibble_hi(uint8_t byte) {

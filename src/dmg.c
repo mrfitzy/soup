@@ -1,8 +1,8 @@
 #include "dmg.h"
 
+#include "assert.h"
 #include "diag.h"
 
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 

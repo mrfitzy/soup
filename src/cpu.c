@@ -1,11 +1,11 @@
 #include "cpu.h"
 
+#include "assert.h"
 #include "bits.h"
 #include "diag.h"
 #include "mem.h"
 #include "op.h"
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,6 +61,7 @@ calc_n(uint8_t old_val, uint8_t val) {
   // all operations either set or clear n consistently
   fprintf(stderr, "error: not expecting to need to calculate n\n");
   assert(false);
+  return 0;
 }
 
 static uint8_t
@@ -95,7 +96,7 @@ update_flag_post_op(
   }
   struct flags* flags = &regs->f;
   struct flags* dirty_flags = &regs->dirty_flags;
-  uint8_t old_flag_val;
+  uint8_t old_flag_val = 0;
   switch (flag) {
   case 'z':
     if (dirty_flags->z) return !printed;
@@ -340,7 +341,7 @@ emulate_jr_if(
   assert(rom_size > 1);
   uint8_t opcode = rom[0];
   uint8_t condcode = bits_4_3(opcode);
-  bool condition;
+  bool condition = false;
   printf("JR ");
   switch (condcode) {
   case 0b00:

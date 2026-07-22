@@ -1,10 +1,10 @@
 #include "diag.h"
 
+#include "assert.h"
 #include "mem.h"
 #include "op.h"
 #include "regs.h"
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

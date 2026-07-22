@@ -54,6 +54,19 @@ fn buildDataLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPa
     return lib;
 }
 
+fn buildAssertLib(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+    const lib = b.addLibrary(.{
+        .name = "assert",
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/assert.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    return lib;
+}
+
 fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !*std.Build.Step.Compile {
     // executable
     const soup = b.addExecutable(.{
@@ -85,6 +98,9 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
 
     // dependencies
     soup.root_module.linkLibrary(data_lib);
+
+    const assert = buildAssertLib(b, target, optimize);
+    soup.root_module.linkLibrary(assert);
 
     const sdl = b.dependency("sdl", .{
         .target = target,
@@ -176,18 +192,6 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
         .flags = cpp_flags,
     });
     kitchen.root_module.link_libcpp = true;
-
-    // test utils from zig
-    const lib = b.addLibrary(.{
-        .name = "souptest",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("test/test.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    kitchen.root_module.linkLibrary(lib);
 
     // additional dependencies
     kitchen.root_module.addCSourceFiles(.{

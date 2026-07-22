@@ -1,6 +1,7 @@
 #include "op.h"
 
-#include <assert.h>
+#include "assert.h"
+
 #include <ctype.h>
 
 _Static_assert(sizeof(struct op) == OP_SIZE, "unexpected size");

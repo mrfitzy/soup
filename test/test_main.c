@@ -1,10 +1,10 @@
+#include "assert.h"
 #include "bits.h"
 #include "diag.h"
 #include "display.h"
 #include "dmg.h"
 #include "signal_handler.h"
 #include "debug_args.h"
-#include "test_shims.h"
 #include "ui.h"
 
 #include <fcntl.h>

@@ -1,8 +1,8 @@
 #include "regs.h"
 
+#include "assert.h"
 #include "mem.h"
 
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -24,8 +24,8 @@ regs_init(struct regs* regs) {
 
 uint8_t*
 regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print) {
-  uint8_t* ptr;
-  char* reg_name;
+  uint8_t* ptr = NULL;
+  char* reg_name = NULL;
   switch (regcode) {
     case 0b000:
       ptr = &regs->b;
@@ -70,8 +70,8 @@ regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print) {
 
 static uint16_t*
 get_ptr16(struct regs* regs, uint8_t regcode, bool print, bool qq) {
-  uint16_t* ptr;
-  char* reg_name;
+  uint16_t* ptr = NULL;
+  char* reg_name = NULL;
   switch (regcode) {
     case 0b00:
       ptr = &regs->bc;
