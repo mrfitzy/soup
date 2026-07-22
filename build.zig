@@ -156,7 +156,6 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
     kitchen.root_module.addCSourceFiles(.{
         .files = &.{
             "test/signal_handler.c",
-            "test/test.c",
             "test/test_main.c",
         },
         .flags = c_flags,
@@ -191,10 +190,6 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
     kitchen.root_module.linkLibrary(lib);
 
     // additional dependencies
-    kitchen.root_module.addLibraryPath(b.path("../xchain/third-party/cmocka/build/src"));
-    kitchen.root_module.addIncludePath(b.path("../xchain/third-party/cmocka/include"));
-    kitchen.root_module.linkSystemLibrary("cmocka", .{ .use_pkg_config = .no });
-
     kitchen.root_module.addCSourceFiles(.{
         .files = &.{
             "../imgui/backends/imgui_impl_sdl3.cpp",

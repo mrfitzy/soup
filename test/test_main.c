@@ -3,7 +3,6 @@
 #include "display.h"
 #include "dmg.h"
 #include "signal_handler.h"
-#include "test.h"
 #include "debug_args.h"
 #include "test_shims.h"
 #include "ui.h"
@@ -172,9 +171,10 @@ static uint8_t convert_logo(uint8_t logo, bool nibble) {
  * h: 0
  * c: 1
  */
-static void
-test_emulate_boot_rom(void** state) {
-  struct debug_args* debug_args = (struct debug_args*)(*state);
+static int
+test_emulate_boot_rom(void* data) {
+  auto debug_args = (struct debug_args*)data;
+  g_debug = debug_args;
   struct dmg_system* actual = &debug_args->dmg;
 
   struct dmg_system e;
@@ -954,13 +954,8 @@ test_emulate_boot_rom(void** state) {
   while (actual->cpu.regs.pc < boot_rom_size) {
     emulate_instruction_for_test(actual);
   }
-}
 
-static int
-test_thread(void* data) {
-  g_debug = (struct debug_args*)data;
-  int rc = test_run(test_emulate_boot_rom, (void**)data);
-  return rc;
+  return 0;
 }
 
 int
@@ -981,7 +976,7 @@ main(void) {
   signal_handler_run();
 
   dmg_init(&args.dmg);
-  int rc = ui_run(test_thread, &args);
+  int rc = ui_run(test_emulate_boot_rom, &args);
   dmg_destroy(&args.dmg);
 
   SDL_DestroySemaphore(args.sem);

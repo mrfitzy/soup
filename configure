@@ -27,7 +27,7 @@ else
 fi
 
 # configure xchain dependencies
-DEPS="zig cmake cmocka"
+DEPS="zig"
 for dep in $DEPS; do
     if [[ ! -f "$XCHAIN_DIR/third-party/$dep/.configured" ]]; then
         print_msg "Configuring $dep..."
