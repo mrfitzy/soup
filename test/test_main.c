@@ -686,10 +686,6 @@ test_emulate_boot_rom(void* data) {
   regs->pc += 2;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  //printf("break 0 @ pc = %04x\n", actual->regs.pc);
-  //fflush(stdout);
-  //g_debug->step = true;
-
   // skip through C-controlled loop from 004a-004f
   for (int i = 0; i < 0x0c; i++) {
     for (int j = 0; j < 5; j++) {
@@ -883,7 +879,7 @@ test_emulate_boot_rom(void* data) {
   flags->c = 0;
   assert_dmg_equal(expect, actual);
 
-  //printf("breaking before sound #1 @ pc = %04x...\n", actual->regs.pc);
+  //printf("breaking before sound #1 @ pc = %04x...\n", actual->cpu.regs.pc);
   //fflush(stdout);
   //g_debug->step = true;
 
@@ -946,9 +942,140 @@ test_emulate_boot_rom(void* data) {
   regs->pc = 0x0060;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  //printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
-  //fflush(stdout);
-  //g_debug->step = true;
+  // fast-forward until scroll count is 0x64
+  while (actual->cpu.regs.h != 0x64) {
+    emulate_instruction_for_test(actual);
+  }
+  mem[0xff42] = 1;
+  regs->a = 0x90;
+  regs->c = 0x13;
+  regs->d = 1;
+  regs->e = 0;
+  regs->h = 0x64;
+  regs->pc = 0x0073;
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  flags->c = 0;
+  assert_dmg_equal(expect, actual);
+
+  // LD A,H
+  regs->a = 0x64;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD E,$83
+  regs->e = 0x83;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // CP $62
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR Z,0080
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD E,$c1
+  regs->e = 0xc1;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // CP $64
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,0086
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A, E
+  regs->a = 0xc1;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+C),A
+  mem[0xff13] = 0xc1;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // INC C
+  regs->c = 0x14;
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,$87
+  regs->a = 0x87;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // sound #2 plays
+  // LD ($FF00+C),A
+  mem[0xff14] = 0x87;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,($FF00+$42)
+  regs->a = 1;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // SUB B
+  regs->a = 0;
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+$42),A
+  mem[0xff42] = 0;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // DEC D
+  regs->d = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,0060
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // DEC B
+  regs->b = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,00e0
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD D,$20
+  regs->d = 0x20;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR 0060
+  regs->pc = 0x0060;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  printf("breaking at test end @ pc = %04x...\n", actual->cpu.regs.pc);
+  fflush(stdout);
+  g_debug->step = true;
 
   // fast-forward through remaining iters
   while (actual->cpu.regs.pc < boot_rom_size) {
