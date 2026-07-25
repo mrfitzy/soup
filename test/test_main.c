@@ -1,10 +1,11 @@
 #include "assert.h"
 #include "bits.h"
+#include "debug_args.h"
 #include "diag.h"
 #include "display.h"
 #include "dmg.h"
+#include "dmg_assert.h"
 #include "signal_handler.h"
-#include "debug_args.h"
 #include "ui.h"
 
 #include <fcntl.h>
@@ -14,111 +15,6 @@
 #include <SDL3/SDL.h>
 
 extern const size_t boot_rom_size;
-
-static void
-assert_mem_equal(const struct mem* a, const struct mem* b) {
-  assert_int_equal(a->size, b->size);
-  assert_int_equal(a->max_addr, b->max_addr);
-  assert_memory_equal(a->mem, b->mem, REG_LY);
-  assert_memory_equal(a->mem + REG_LY + 1, b->mem + REG_LY + 1, a->size - REG_LY - 1);
-}
-
-static inline void
-assert_flag_z_equal(uint8_t a, uint8_t b) {
-  assert_int_equal(a, b);
-}
-
-static inline void
-assert_flag_n_equal(uint8_t a, uint8_t b) {
-  assert_int_equal(a, b);
-}
-
-static inline void
-assert_flag_h_equal(uint8_t a, uint8_t b) {
-  assert_int_equal(a, b);
-}
-
-static inline void
-assert_flag_cy_equal(uint8_t a, uint8_t b) {
-  assert_int_equal(a, b);
-}
-
-static void
-assert_flags_equal(const struct flags* a, const struct flags* b) {
-  assert_flag_z_equal(a->z, b->z);
-  assert_flag_n_equal(a->n, b->n);
-  assert_flag_h_equal(a->h, b->h);
-  assert_flag_cy_equal(a->c, b->c);
-  int a_unused = a->unused;
-  int b_unused = b->unused;
-  assert_int_equal(a_unused, b_unused);
-}
-
-static inline void
-assert_a_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->a, &b->a, 1);
-}
-
-static inline void
-assert_b_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->b, &b->b, 1);
-}
-
-static inline void
-assert_c_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->c, &b->c, 1);
-}
-
-static inline void
-assert_d_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->d, &b->d, 1);
-}
-
-static inline void
-assert_e_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->e, &b->e, 1);
-}
-
-static inline void
-assert_h_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->h, &b->h, 1);
-}
-
-static inline void
-assert_l_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->l, &b->l, 1);
-}
-
-static inline void
-assert_sp_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->sp, &b->sp, 2);
-}
-
-static inline void
-assert_pc_equal(const struct regs* a, const struct regs* b) {
-  assert_memory_equal(&a->pc, &b->pc, 2);
-}
-
-static void
-assert_regs_equal(const struct regs* a, const struct regs* b) {
-  assert_a_equal(a, b);
-  assert_b_equal(a, b);
-  assert_c_equal(a, b);
-  assert_d_equal(a, b);
-  assert_e_equal(a, b);
-  assert_h_equal(a, b);
-  assert_l_equal(a, b);
-  assert_sp_equal(a, b);
-  assert_pc_equal(a, b);
-  assert_flags_equal(&a->f, &b->f);
-  assert_memory_equal(a, b, sizeof(struct regs));
-}
-
-static void
-assert_dmg_equal(const struct dmg_system* a, const struct dmg_system* b) {
-  assert_regs_equal(&a->cpu.regs, &b->cpu.regs);
-  assert_mem_equal(&a->mem, &b->mem);
-}
 
 static struct debug_args* g_debug;
 

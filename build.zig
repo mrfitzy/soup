@@ -171,6 +171,7 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
     // additional kitchen sources
     kitchen.root_module.addCSourceFiles(.{
         .files = &.{
+            "test/dmg_assert.c",
             "test/signal_handler.c",
             "test/test_main.c",
         },
