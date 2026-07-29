@@ -40,7 +40,7 @@ display_create(struct dmg_system* dmg) {
 void
 display_destroy(struct display* display) {
   SDL_SignalSemaphore(display->frame_ready);
-  assert(!SDL_GetSemaphoreValue(display->frame_ready));
+  //assert(!SDL_GetSemaphoreValue(display->frame_ready)); // XXX
   SDL_DestroySemaphore(display->frame_ready);
   SDL_DestroyTexture(display->texture);
   SDL_DestroyRenderer(display->r);

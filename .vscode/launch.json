@@ -16,11 +16,11 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "test_soup",
-            "program": "${workspaceFolder}/test_soup",
-            "args": ["data/ops.bin", "data/cb_ops.bin", "data/DMG_ROM.bin"],
+            "name": "kitchen",
+            "program": "${workspaceFolder}/zig-out/bin/kitchen",
             "expressions": "native",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build kitchen"
         },
         {
             "type": "lldb",

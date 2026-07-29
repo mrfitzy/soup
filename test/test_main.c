@@ -13,6 +13,9 @@
 #include <stdlib.h>
 #include <SDL3/SDL.h>
 
+#define hi (true)
+#define lo (false)
+
 extern const size_t boot_rom_size;
 
 static void
@@ -142,9 +145,6 @@ emulate_instruction_and_assert_dmg_equal(
   assert_dmg_equal(expect, actual);
 }
 
-#define hi (true)
-#define lo (false)
-
 static uint8_t convert_logo(uint8_t logo, bool nibble) {
   uint8_t bit = (nibble == hi) ? 7 : 3;
   uint8_t val = 0;
@@ -158,19 +158,6 @@ static uint8_t convert_logo(uint8_t logo, bool nibble) {
   return val;
 }
 
-/**
- * af: 80 22
- * bc: 01 70
- * de: 01 04
- * hl: 80 10
- * sp: ff fc
- * pc: 00 99
- *
- * z: 0
- * n: 1
- * h: 0
- * c: 1
- */
 static int
 test_emulate_boot_rom(void* data) {
   auto debug_args = (struct debug_args*)data;
@@ -512,7 +499,7 @@ test_emulate_boot_rom(void* data) {
   assert_int_equal(0xfc, convert_logo(0xed, hi));
   assert_int_equal(0xf3, convert_logo(0xed, lo));
 
-  // fast-forward through remaining iters
+  // fast-forward
   // after iter n:
   // mem[0x8010+8n], mem[0x8012+8n] = mem[0x0104+n]_77665544
   // mem[0x8014+8n], mem[0x8016+8n] = mem[0x0104+n]_33221100
@@ -946,14 +933,236 @@ test_emulate_boot_rom(void* data) {
   regs->pc = 0x0060;
   emulate_instruction_and_assert_dmg_equal(expect, actual);
 
-  //printf("breaking at test end @ pc = %04x...\n", actual->regs.pc);
-  //fflush(stdout);
-  //g_debug->step = true;
-
-  // fast-forward through remaining iters
-  while (actual->cpu.regs.pc < boot_rom_size) {
+  // fast-forward until scroll count is 0x64
+  while (actual->cpu.regs.h != 0x64) {
     emulate_instruction_for_test(actual);
   }
+  mem[0xff42] = 1;
+  regs->a = 0x90;
+  regs->c = 0x13;
+  regs->d = 1;
+  regs->e = 0;
+  regs->h = 0x64;
+  regs->pc = 0x0073;
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  flags->c = 0;
+  assert_dmg_equal(expect, actual);
+
+  // LD A,H
+  regs->a = 0x64;
+  regs->pc += 1;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD E,$83
+  regs->e = 0x83;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // CP $62
+  flags->z = 0;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR Z,0080
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD E,$c1
+  regs->e = 0xc1;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // CP $64
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,0086
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A, E
+  regs->a = 0xc1;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+C),A
+  mem[0xff13] = 0xc1;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // INC C
+  regs->c = 0x14;
+  flags->z = 0;
+  flags->n = 0;
+  flags->h = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,$87
+  regs->a = 0x87;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // sound #2 plays
+  // LD ($FF00+C),A
+  mem[0xff14] = 0x87;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD A,($FF00+$42)
+  regs->a = 1;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // SUB B
+  regs->a = 0;
+  flags->z = 1;
+  flags->n = 1;
+  flags->h = 0;
+  flags->c = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD ($FF00+$42),A
+  mem[0xff42] = 0;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // DEC D
+  regs->d = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,0060
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // DEC B
+  regs->b = 0;
+  regs->pc++;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR NZ,00e0
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // LD D,$20
+  regs->d = 0x20;
+  regs->pc += 2;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  // JR 0060
+  regs->pc = 0x0060;
+  emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+  for (int i = 0; i < 0x20; i++) {
+    printf("XXX i = %d\n", i);
+    // fast-forward through LY loop starting at 0060
+    while (actual->cpu.regs.pc != 0x0070) {
+      emulate_instruction_for_test(actual);
+    }
+    regs->a = 0x90;
+    regs->c = 0;
+    regs->e = 0;
+    flags->z = 1;
+    flags->n = 1;
+    flags->h = 0;
+    regs->pc = 0x0070;
+    assert_dmg_equal(expect, actual);
+
+    // LD C,$13
+    regs->c = 0x13;
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // INC H
+    regs->h = 0x65 + i;
+    regs->pc += 1;
+    flags->z = 0;
+    flags->n = 0;
+    flags->h = (i % 0xa) ? 1 : 0;
+    flags->c = 0;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // LD A,H
+    regs->a = 0x65 + i;
+    regs->pc += 1;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // LD E,$83
+    regs->e = 0x83;
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // CP $62
+    flags->z = 0;
+    flags->n = 1;
+    flags->h = 0;
+    flags->c = 0;
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // JR Z,0080
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // LD E,$c1
+    regs->e = 0xc1;
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // CP $64
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // JR NZ,0086
+    regs->pc = 0x0086;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // LD A,($FF00+$42)
+    regs->a = 0;
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // SUB B
+    flags->z = 1;
+    regs->pc++;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // LD ($FF00+$42),A
+    regs->pc += 2;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // DEC D
+    regs->d = 0x1f - i;
+    flags->z = (i == 0x1f) ? 1 : 0;
+    flags->n = 1;
+    flags->h = ((i == 0) || (i == 0x10)) ? 1 : 0;
+    flags->c = 0;
+    regs->pc++;
+    emulate_instruction_and_assert_dmg_equal(expect, actual);
+
+    // JR NZ,0060
+    regs->pc = (i == 0x1f) ? (regs->pc + 2) : 0x0060;
+  }
+
+  printf("breaking at test end @ pc = %04x...\n", actual->cpu.regs.pc);
+  fflush(stdout);
+  g_debug->step = true;
+
+  // fast-forward through remaining iters
+  //while (actual->cpu.regs.pc < boot_rom_size) {
+  //  emulate_instruction_for_test(actual);
+  //}
 
   return 0;
 }
