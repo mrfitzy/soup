@@ -128,6 +128,7 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
         "src/op.c",
         "src/regs.c",
         "src/ui.c",
+        "tools/log.c",
     };
     var c_flags = try default_c_flags(b, options);
     defer c_flags.deinit(b.allocator);

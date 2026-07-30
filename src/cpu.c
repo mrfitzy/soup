@@ -3,6 +3,7 @@
 #include "assert.h"
 #include "bits.h"
 #include "diag.h"
+#include "log.h"
 #include "mem.h"
 #include "op.h"
 #include "profiler_zone.h"
@@ -661,11 +662,10 @@ cpu_execute_instruction(struct cpu* cpu) {
 
 post_op:
   if (!handled) {
-    fprintf(stderr, "\nerror: opcode %02x not yet implemented\n", opcode);
+    log_error("opcode %02x not yet implemented", opcode);
     print_op(op);
     print_regs(regs);
     print_mem(mem);
-    //print_backtrace();
     assert(false);
   }
   if (!pc_handled)
