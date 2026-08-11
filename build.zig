@@ -96,12 +96,14 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
     });
     soup.root_module.addIncludePath(b.path("include"));
 
-    // dependencies
+    // dependency: data lib
     soup.root_module.linkLibrary(data_lib);
 
+    // dependency: assert lib
     const assert = buildAssertLib(b, target, optimize);
     soup.root_module.linkLibrary(assert);
 
+    // dependency: SDL3
     const sdl = b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
@@ -109,6 +111,7 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
     const sdl_artifact = sdl.artifact("SDL3");
     soup.root_module.linkLibrary(sdl_artifact);
 
+    // dependency: macOS sdk
     if (target.result.os.tag == .macos and b.graph.host.result.os.tag != .macos) {
         if (b.graph.host.result.os.tag == .windows) {
             // MacOS SDK paths are incompatible with windows hosts
@@ -140,6 +143,26 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
 }
 
 fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+    // add profiler XXX piggybacking on data_lib
+    data_lib.root_module.addCSourceFiles(.{
+        .files = &.{ "tools/profiler.cpp" },
+        .flags = &.{
+            "-std=c++11",
+            "-Wall",
+            "-Wformat",
+            "-DTRACY_ENABLE",
+        },
+    });
+    data_lib.root_module.addIncludePath(b.path("include"));
+    data_lib.root_module.link_libcpp = true;
+    const tracy = b.dependency("tracy", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const tracy_client = tracy.artifact("tracyclient");
+    data_lib.root_module.linkLibrary(tracy_client);
+
+    // make soup
     const soup = try createEmulatorExe(b, "soup", data_lib, c_flags, target, optimize);
 
     // additional soup sources
@@ -183,6 +206,7 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
         "-std=c++11",
         "-Wall",
         "-Wformat",
+        "-DTRACY_ENABLE",
     };
     kitchen.root_module.addCSourceFiles(.{
         .files = &.{
@@ -231,6 +255,7 @@ pub fn default_c_flags(b: *std.Build, target: std.Build.ResolvedTarget) !std.Arr
         "-Werror",
         "-Wall",
         "-Wextra",
+        "-DTRACY_ENABLE",
     });
     if (target.result.os.tag == .macos) {
         try flags.append(b.allocator, "-Wno-error=deprecated-declarations");

@@ -1,5 +1,4 @@
-#ifndef UI_H
-#define UI_H
+#pragma once
 
 #include <stdint.h>
 #include <unistd.h>
@@ -15,5 +14,3 @@ void ui_update(void* data);
 #ifdef __cplusplus
 } // extern "C"
 #endif
-
-#endif // UI_H
