@@ -10,6 +10,7 @@
 #include <SDL3/SDL.h>
 
 #include <inttypes.h>
+#include <stdio.h>
 
 extern const struct op* ops_data;
 extern const struct op* cb_ops_data;
