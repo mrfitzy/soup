@@ -16,7 +16,8 @@
             .hash = "sdl-1.0.1+3.4.4-i4QD0aSSqQCKa4hqLCExg4sjLPWkuFsXEvl8kmD6zakm",
         },
         .tracy = .{
-            .path = "../tracy/public",
+            .path = "../tracy-zig",
+            .lazy = true,
         },
     },
     .paths = .{""},

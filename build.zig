@@ -4,21 +4,59 @@ const BuildError = error{
     InvalidCrossCompile,
 };
 
-fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) [2]std.Build.LazyPath {
+const BuildOptions = struct {
+    tracy: ?[]const u8,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+};
+
+pub fn build(b: *std.Build) void {
+    // build options
+    const options: BuildOptions = .{
+        .tracy = b.option([]const u8, "tracy", "Path to tracy repo (enables profiling)"),
+        .target = b.standardTargetOptions(.{}),
+        .optimize = b.standardOptimizeOption(.{}),
+    };
+
+    // data lib
+    const ops, const cb_ops = buildTool(b, options);
+    const data_lib = buildDataLib(b, ops, cb_ops, options);
+
+    // profiler
+    addProfiler(b, data_lib, options) catch |err| {
+        std.debug.print("error adding profiler: {}\n", .{err});
+        std.process.exit(1);
+    };
+
+    // soup
+    buildSoup(b, data_lib, options) catch |err| {
+        std.debug.print("error building soup: {}\n", .{err});
+        std.process.exit(1);
+    };
+
+    // kitchen
+    buildKitchen(b, data_lib, options) catch |err| {
+        std.debug.print("error building kitchen: {}\n", .{err});
+        std.process.exit(1);
+    };
+}
+
+fn buildTool(b: *std.Build, options: BuildOptions) [2]std.Build.LazyPath {
+    // tool executable
     const tool = b.addExecutable(.{
         .name = "gen_ops",
         .root_module = b.createModule(.{
             .root_source_file = b.path("tools/gen_ops.zig"),
             .target = b.graph.host,
-            .optimize = optimize,
+            .optimize = options.optimize,
         }),
     });
     tool.root_module.addIncludePath(b.path("include"));
 
-    // deps
+    // dependency: args
     const args_dep = b.dependency("args", .{
         .target = b.graph.host,
-        .optimize = optimize,
+        .optimize = options.optimize,
     });
     tool.root_module.addImport("args", args_dep.module("args"));
 
@@ -38,14 +76,14 @@ fn buildTool(b: *std.Build, optimize: std.builtin.OptimizeMode) [2]std.Build.Laz
     return .{ ops, cb_ops };
 }
 
-fn buildDataLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPath, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+fn buildDataLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPath, options: BuildOptions) *std.Build.Step.Compile {
     const lib = b.addLibrary(.{
         .name = "dmg_data",
         .linkage = .static,
         .root_module = b.createModule(.{
             .root_source_file = b.path("data/dmg.zig"),
-            .target = target,
-            .optimize = optimize,
+            .target = options.target,
+            .optimize = options.optimize,
         }),
     });
     lib.root_module.addAnonymousImport("c_ops", .{ .root_source_file = ops });
@@ -54,26 +92,26 @@ fn buildDataLib(b: *std.Build, ops: std.Build.LazyPath, cb_ops: std.Build.LazyPa
     return lib;
 }
 
-fn buildAssertLib(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+fn buildAssertLib(b: *std.Build, options: BuildOptions) *std.Build.Step.Compile {
     const lib = b.addLibrary(.{
         .name = "assert",
         .linkage = .static,
         .root_module = b.createModule(.{
             .root_source_file = b.path("tools/assert.zig"),
-            .target = target,
-            .optimize = optimize,
+            .target = options.target,
+            .optimize = options.optimize,
         }),
     });
     return lib;
 }
 
-fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !*std.Build.Step.Compile {
+fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.Step.Compile, options: BuildOptions) !*std.Build.Step.Compile {
     // executable
     const soup = b.addExecutable(.{
         .name = exe_name,
         .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
+            .target = options.target,
+            .optimize = options.optimize,
             .link_libc = true,
         }),
     });
@@ -90,9 +128,11 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
         "src/op.c",
         "src/regs.c",
     };
+    var c_flags = try default_c_flags(b, options);
+    defer c_flags.deinit(b.allocator);
     soup.root_module.addCSourceFiles(.{
         .files = common_c_sources,
-        .flags = c_flags,
+        .flags = c_flags.items,
     });
     soup.root_module.addIncludePath(b.path("include"));
 
@@ -100,27 +140,27 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
     soup.root_module.linkLibrary(data_lib);
 
     // dependency: assert lib
-    const assert = buildAssertLib(b, target, optimize);
+    const assert = buildAssertLib(b, options);
     soup.root_module.linkLibrary(assert);
 
     // dependency: SDL3
     const sdl = b.dependency("sdl", .{
-        .target = target,
-        .optimize = optimize,
+        .target = options.target,
+        .optimize = options.optimize,
     });
     const sdl_artifact = sdl.artifact("SDL3");
     soup.root_module.linkLibrary(sdl_artifact);
 
     // dependency: macOS sdk
-    if (target.result.os.tag == .macos and b.graph.host.result.os.tag != .macos) {
+    if (options.target.result.os.tag == .macos and b.graph.host.result.os.tag != .macos) {
         if (b.graph.host.result.os.tag == .windows) {
             // MacOS SDK paths are incompatible with windows hosts
             std.log.err("error: cross-compiling for macOS from Windows is not supported", .{});
             return error.InvalidCrossCompile;
         }
         if (b.lazyDependency("macos-sdk", .{
-            .target = target,
-            .optimize = optimize,
+            .target = options.target,
+            .optimize = options.optimize,
         })) |sdk| {
             const macos_sdk_framework_dir = sdk.path("MacOSX26.5.sdk/System/Library/Frameworks");
             soup.root_module.addFrameworkPath(macos_sdk_framework_dir);
@@ -142,36 +182,52 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
     return soup;
 }
 
-fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
-    // add profiler XXX piggybacking on data_lib
-    data_lib.root_module.addCSourceFiles(.{
-        .files = &.{ "tools/profiler.cpp" },
-        .flags = &.{
-            "-std=c++11",
-            "-Wall",
-            "-Wformat",
-            "-DTRACY_ENABLE",
-        },
-    });
+fn addProfiler(b: *std.Build, data_lib: *std.Build.Step.Compile, options: BuildOptions) !void {
     data_lib.root_module.addIncludePath(b.path("include"));
-    data_lib.root_module.link_libcpp = true;
-    const tracy = b.dependency("tracy", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const tracy_client = tracy.artifact("tracyclient");
-    data_lib.root_module.linkLibrary(tracy_client);
 
+    if (options.tracy == null) {
+        // use stubs
+        var c_flags = try default_c_flags(b, options);
+        defer c_flags.deinit(b.allocator);
+        data_lib.root_module.addCSourceFiles(.{
+            .files = &.{"tools/profiler_stubs.c"},
+            .flags = c_flags.items,
+        });
+        data_lib.root_module.link_libc = true;
+        return;
+    }
+
+    // XXX piggybacking on data_lib
+    var cpp_flags = try default_cpp_flags(b, options);
+    defer cpp_flags.deinit(b.allocator);
+    data_lib.root_module.addCSourceFiles(.{
+        .files = &.{"tools/profiler.cpp"},
+        .flags = cpp_flags.items,
+    });
+    data_lib.root_module.link_libcpp = true;
+    if (b.lazyDependency("tracy", .{
+        .target = options.target,
+        .optimize = options.optimize,
+        .tracy = options.tracy.?,
+    })) |tracy| {
+        const tracy_client = tracy.artifact("tracyclient");
+        data_lib.root_module.linkLibrary(tracy_client);
+    }
+}
+
+fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, options: BuildOptions) !void {
     // make soup
-    const soup = try createEmulatorExe(b, "soup", data_lib, c_flags, target, optimize);
+    const soup = try createEmulatorExe(b, "soup", data_lib, options);
 
     // additional soup sources
+    var c_flags = try default_c_flags(b, options);
+    defer c_flags.deinit(b.allocator);
     soup.root_module.addCSourceFiles(.{
         .files = &.{
             "src/main.c",
             "src/ui_loop.c",
         },
-        .flags = c_flags,
+        .flags = c_flags.items,
     });
 
     // install
@@ -187,34 +243,32 @@ fn buildSoup(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: []const 
     run_step.dependOn(&run_exe.step);
 }
 
-pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: []const []const u8, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, options: BuildOptions) !void {
     // kitchen debugger executable
-    const kitchen = try createEmulatorExe(b, "kitchen", data_lib, c_flags, target, optimize);
+    const kitchen = try createEmulatorExe(b, "kitchen", data_lib, options);
 
     // additional kitchen sources
+    var c_flags = try default_c_flags(b, options);
+    defer c_flags.deinit(b.allocator);
     kitchen.root_module.addCSourceFiles(.{
         .files = &.{
             "test/dmg_assert.c",
             "test/signal_handler.c",
             "test/test_main.c",
         },
-        .flags = c_flags,
+        .flags = c_flags.items,
     });
     kitchen.root_module.addIncludePath(b.path("test"));
 
-    const cpp_flags = &.{
-        "-std=c++11",
-        "-Wall",
-        "-Wformat",
-        "-DTRACY_ENABLE",
-    };
+    var cpp_flags = try default_cpp_flags(b, options);
+    defer cpp_flags.deinit(b.allocator);
     kitchen.root_module.addCSourceFiles(.{
         .files = &.{
             "test/ui_loop_dbg.cpp",
             "ui/tile.cpp",
             "ui/ui.cpp",
         },
-        .flags = cpp_flags,
+        .flags = cpp_flags.items,
     });
     kitchen.root_module.link_libcpp = true;
 
@@ -229,7 +283,7 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
             "../imgui/imgui_tables.cpp",
             "../imgui/imgui_widgets.cpp",
         },
-        .flags = cpp_flags,
+        .flags = cpp_flags.items,
     });
     kitchen.root_module.addIncludePath(b.path("../imgui"));
     kitchen.root_module.addIncludePath(b.path("../imgui/backends"));
@@ -247,7 +301,7 @@ pub fn buildKitchen(b: *std.Build, data_lib: *std.Build.Step.Compile, c_flags: [
     run_step.dependOn(&run_exe.step);
 }
 
-pub fn default_c_flags(b: *std.Build, target: std.Build.ResolvedTarget) !std.ArrayList([]const u8) {
+pub fn default_c_flags(b: *std.Build, options: BuildOptions) !std.ArrayList([]const u8) {
     var flags: std.ArrayList([]const u8) = .empty;
     try flags.appendSlice(b.allocator, &[_][]const u8{
         "-std=c23",
@@ -255,32 +309,25 @@ pub fn default_c_flags(b: *std.Build, target: std.Build.ResolvedTarget) !std.Arr
         "-Werror",
         "-Wall",
         "-Wextra",
-        "-DTRACY_ENABLE",
     });
-    if (target.result.os.tag == .macos) {
+    if (options.tracy) |_| {
+        try flags.append(b.allocator, "-DTRACY_ENABLE");
+    }
+    if (options.target.result.os.tag == .macos) {
         try flags.append(b.allocator, "-Wno-error=deprecated-declarations");
     }
     return flags;
 }
 
-pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-
-    const ops, const cb_ops = buildTool(b, optimize);
-    const data_lib = buildDataLib(b, ops, cb_ops, target, optimize);
-
-    var c_flags = default_c_flags(b, target) catch |err| {
-        std.debug.print("error generating cflags: {}\n", .{err});
-        std.process.exit(1);
-    };
-    defer c_flags.deinit(b.allocator);
-
-    buildSoup(b, data_lib, c_flags.items, target, optimize) catch |err| {
-        std.debug.print("error building soup: {}\n", .{err});
-        std.process.exit(1);
-    };
-    buildKitchen(b, data_lib, c_flags.items, target, optimize) catch |err| {
-        std.debug.print("error building kitchen: {}\n", .{err});
-    };
+pub fn default_cpp_flags(b: *std.Build, options: BuildOptions) !std.ArrayList([]const u8) {
+    var flags: std.ArrayList([]const u8) = .empty;
+    try flags.appendSlice(b.allocator, &[_][]const u8{
+        "-std=c++11",
+        "-Wall",
+        "-Wformat",
+    });
+    if (options.tracy) |_| {
+        try flags.append(b.allocator, "-DTRACY_ENABLE");
+    }
+    return flags;
 }
