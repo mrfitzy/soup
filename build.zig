@@ -5,7 +5,7 @@ const BuildError = error{
 };
 
 const BuildOptions = struct {
-    tracy: ?[]const u8,
+    profile: bool,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 };
@@ -13,7 +13,7 @@ const BuildOptions = struct {
 pub fn build(b: *std.Build) void {
     // build options
     const options: BuildOptions = .{
-        .tracy = b.option([]const u8, "tracy", "Path to tracy repo (enables profiling)"),
+        .profile = b.option(bool, "profile", "Enable profiler") orelse false,
         .target = b.standardTargetOptions(.{}),
         .optimize = b.standardOptimizeOption(.{}),
     };
@@ -185,7 +185,7 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
 fn addProfiler(b: *std.Build, data_lib: *std.Build.Step.Compile, options: BuildOptions) !void {
     data_lib.root_module.addIncludePath(b.path("include"));
 
-    if (options.tracy == null) {
+    if (!options.profile) {
         // use stubs
         var c_flags = try default_c_flags(b, options);
         defer c_flags.deinit(b.allocator);
@@ -208,7 +208,6 @@ fn addProfiler(b: *std.Build, data_lib: *std.Build.Step.Compile, options: BuildO
     if (b.lazyDependency("tracy", .{
         .target = options.target,
         .optimize = options.optimize,
-        .tracy = options.tracy.?,
     })) |tracy| {
         const tracy_client = tracy.artifact("tracyclient");
         data_lib.root_module.linkLibrary(tracy_client);
@@ -310,7 +309,7 @@ pub fn default_c_flags(b: *std.Build, options: BuildOptions) !std.ArrayList([]co
         "-Wall",
         "-Wextra",
     });
-    if (options.tracy) |_| {
+    if (options.profile) {
         try flags.append(b.allocator, "-DTRACY_ENABLE");
     }
     if (options.target.result.os.tag == .macos) {
@@ -326,7 +325,7 @@ pub fn default_cpp_flags(b: *std.Build, options: BuildOptions) !std.ArrayList([]
         "-Wall",
         "-Wformat",
     });
-    if (options.tracy) |_| {
+    if (options.profile) {
         try flags.append(b.allocator, "-DTRACY_ENABLE");
     }
     return flags;
