@@ -5,6 +5,7 @@
 #include "diag.h"
 #include "mem.h"
 #include "op.h"
+#include "profiler_zone.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -566,6 +567,7 @@ emulate_ld_d16_a(
 
 void
 cpu_execute_instruction(struct cpu* cpu) {
+  PROFILER_ZONE_BEGIN(ctx, "cpu_execute_instruction");
   const struct op* cb_op;
   const struct op* op = get_op(cpu, &cb_op);
   uint8_t opcode = op->opcode;
@@ -673,6 +675,7 @@ post_op:
   regs_mark_all_flags_clean(regs);
   fflush(stderr);
   fflush(stdout);
+  PROFILER_ZONE_END(ctx, "cpu_execute_instruction");
 }
 
 void

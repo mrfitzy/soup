@@ -179,6 +179,17 @@ fn createEmulatorExe(b: *std.Build, exe_name: []const u8, data_lib: *std.Build.S
         }
     }
 
+    // optional dependency: profiler (C macros only)
+    if (options.profile) {
+        if (b.lazyDependency("tracy", .{
+            .target = options.target,
+            .optimize = options.optimize,
+        })) |tracy| {
+            const tracy_client = tracy.artifact("tracyclient");
+            soup.root_module.addIncludePath(tracy_client.getEmittedIncludeTree());
+        }
+    }
+
     return soup;
 }
 

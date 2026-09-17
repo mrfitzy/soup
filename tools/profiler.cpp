@@ -2,12 +2,10 @@
 
 #include <tracy/Tracy.hpp>
 
-void
-profiler_init() {
+void profiler_init() {
   TracySetProgramName("soup");
 }
 
-void
-profiler_set_thread_name(const char* name) {
+void profiler_set_thread_name(const char* name) {
   tracy::SetThreadName(name);
 }
