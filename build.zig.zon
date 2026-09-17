@@ -16,8 +16,8 @@
             .hash = "sdl-1.0.1+3.4.4-i4QD0aSSqQCKa4hqLCExg4sjLPWkuFsXEvl8kmD6zakm",
         },
         .tracy = .{
-            .url = "git+https://github.com/mrfitzy/tracy-zig.git#2fb67568c7c184ecdcf5191b9c8a4ded1d13008a",
-            .hash = "public-0.0.0-7NmBB0QPAABQ74oKHcUf71W7b7CkzVrtbadstwgFnIhL",
+            .url = "git+https://github.com/mrfitzy/tracy-zig.git#73d88eeabd12f1ff54f7bd101d2edf6ebc4a63d9",
+            .hash = "public-0.0.0-7NmBB8wPAAAcqzavFAiY9suaqr0USv06uIdRAGvsDXX9",
             .lazy = true,
         },
     },
