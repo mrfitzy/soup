@@ -6,6 +6,6 @@
 
 void profiler_start() {}
 
-void profiler_set_thread_name(const char* name) {
-  (void)name;
-}
+void profiler_set_thread_name(const char*) {}
+
+void profiler_plot(const char*, int) {}

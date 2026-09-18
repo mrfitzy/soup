@@ -3,6 +3,7 @@
 #include "bits.h"
 #include "display.h"
 #include "mem.h"
+#include "profiler_zone.h"
 
 #include <SDL3/SDL.h>
 
@@ -21,12 +22,14 @@ lcdc_init(struct lcdc* lcdc, uint8_t* memmap) {
 
 static uint64_t
 line_complete_cb(void* data, SDL_TimerID id, uint64_t interval) {
+  PROFILER_ZONE_BEGIN(ctx, "lcdc");
   struct lcdc* lcdc = data;
   (void)id;
 
   bool off = !bit_7(*(lcdc->lcdc));
   if (off) {
     *(lcdc->ly) = 0;
+    PROFILER_ZONE_END(ctx, "lcdc");
     return 0;
   }
 
@@ -38,6 +41,7 @@ line_complete_cb(void* data, SDL_TimerID id, uint64_t interval) {
   } else {
     *(lcdc->ly) += 1;
   }
+  PROFILER_ZONE_END(ctx, "lcdc");
   return interval;
 }
 
