@@ -2,7 +2,7 @@
 
 #include <tracy/Tracy.hpp>
 
-void profiler_init() {
+void profiler_start() {
   TracySetProgramName("soup");
 }
 

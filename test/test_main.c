@@ -983,9 +983,9 @@ test_emulate_boot_rom(void* data) {
 
 int
 main(void) {
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
-    fprintf(stderr, "error: SDL_Init(): %s\n", SDL_GetError());
-    return 1;
+  int rc = ui_start();
+  if (rc != 0) {
+    return rc;
   }
 
   struct debug_args args;
@@ -999,10 +999,10 @@ main(void) {
   signal_handler_run();
 
   dmg_init(&args.dmg);
-  int rc = ui_run(test_emulate_boot_rom, &args);
+  rc = ui_run(test_emulate_boot_rom, &args);
   dmg_destroy(&args.dmg);
 
   SDL_DestroySemaphore(args.sem);
-  SDL_Quit();
+  ui_stop();
   return rc;
 }

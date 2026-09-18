@@ -2,9 +2,6 @@
 #include "profiler.h"
 #include "ui.h"
 
-#include <SDL3/SDL.h>
-#include <stdio.h>
-
 static int
 run_dmg(void* data) {
   profiler_set_thread_name("dmg");
@@ -14,18 +11,18 @@ run_dmg(void* data) {
 
 int
 main(void) {
-  profiler_init();
+  profiler_start();
   profiler_set_thread_name("ui");
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
-    fprintf(stderr, "error: SDL_Init(): %s\n", SDL_GetError());
-    return 1;
+  int rc = ui_start();
+  if (rc != 0) {
+    return rc;
   }
 
   struct dmg_system dmg;
   dmg_init(&dmg);
-  int rc = ui_run(run_dmg, &dmg);
+  rc = ui_run(run_dmg, &dmg);
   dmg_destroy(&dmg);
 
-  SDL_Quit();
+  ui_stop();
   return rc;
 }
