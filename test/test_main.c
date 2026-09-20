@@ -5,6 +5,7 @@
 #include "display.h"
 #include "dmg.h"
 #include "dmg_assert.h"
+#include "op.h"
 #include "signal_handler.h"
 #include "ui.h"
 
@@ -27,7 +28,7 @@ emulate_instruction_for_test(struct dmg_system* dmg) {
       exit(0);
     }
   }
-  cpu_execute_instruction(&dmg->cpu);
+  dmg_step(dmg);
 }
 
 static void

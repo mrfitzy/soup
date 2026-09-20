@@ -79,15 +79,14 @@ display_next_frame(struct display* display) {
   SDL_SignalSemaphore(display->frame_ready);
 }
 
-bool
-display_should_render(struct display* display) {
-  return SDL_TryWaitSemaphore(display->frame_ready);
+void
+display_wait_for_frame(struct display* display) {
+  SDL_WaitSemaphore(display->frame_ready);
 }
 
 void
 display_render(struct display* display) {
   // render bg surface
-  const struct lcdc* lcdc = &display->dmg->lcdc;
   SDL_SetRenderTarget(display->r, display->texture);
   SDL_SetRenderDrawColor(display->r, 0, 0, 0, 255);
   SDL_RenderClear(display->r);
@@ -99,6 +98,7 @@ display_render(struct display* display) {
   SDL_RenderClear(display->r);
 
   // render viewport
+  const struct lcdc* lcdc = &display->dmg->lcdc;
   SDL_FRect src = { *(lcdc->scx), *(lcdc->scy), 160, 144 };
   SDL_FRect viewport = { 0, 0, 160*SCALE, 144*SCALE };
   SDL_SetTextureScaleMode(display->texture, SDL_SCALEMODE_NEAREST);

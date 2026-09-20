@@ -13,6 +13,8 @@ struct dmg_system {
   struct mem mem;
   struct lcdc lcdc;
   struct apu apu;
+  uint32_t epoch;
+  uint64_t frame_deadline_ns;
   struct display* display;
 };
 
@@ -26,6 +28,8 @@ void dmg_init_with_options(struct dmg_system*, enum dmg_init_options);
 
 void dmg_destroy(struct dmg_system*);
 
-void dmg_on(struct dmg_system*);
+void dmg_step(struct dmg_system*);
+
+void dmg_run(struct dmg_system*);
 
 uint8_t dmg_get_logo(uint16_t offset);

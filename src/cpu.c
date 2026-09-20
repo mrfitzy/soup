@@ -547,7 +547,7 @@ emulate_ld_d16_a(
 
 const struct op*
 cpu_execute_instruction(struct cpu* cpu) {
-  PROFILER_ZONE_BEGIN(ctx, "cpu_execute_instruction");
+  PROFILER_ZONE_BEGIN(ctx, "cpu");
   const struct op* cb_op;
   auto op = get_op(cpu, &cb_op);
   uint8_t opcode = op->opcode;
@@ -651,7 +651,7 @@ post_op:
   // fallback logic for flags uses accumulator
   update_flags_post_op(regs, cb_op ? cb_op : op, prev_a, regs->a);
   regs_mark_all_flags_clean(regs);
-  PROFILER_ZONE_END(ctx, "cpu_execute_instruction");
+  PROFILER_ZONE_END(ctx, "cpu");
 
   return (op->opcode == 0xcb) ? cb_op : op;
 }

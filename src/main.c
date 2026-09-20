@@ -6,7 +6,7 @@
 static int
 run_dmg(void* data) {
   profiler_set_thread_name("dmg");
-  dmg_on((struct dmg_system*)data);
+  dmg_run((struct dmg_system*)data);
   return 0;
 }
 

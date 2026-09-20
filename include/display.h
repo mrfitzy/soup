@@ -16,7 +16,7 @@ void display_destroy(struct display*);
 
 void display_next_frame(struct display*);
 
-bool display_should_render(struct display*);
+void display_wait_for_frame(struct display*);
 
 void display_render(struct display*);
 

@@ -13,6 +13,7 @@
 int
 ui_run(int (*work_fn)(void*), void* data) {
   auto debug = (struct debug_args*)data;
+  auto display = debug->dmg.display;
 
   SDL_Thread* thread = SDL_CreateThread(work_fn, "test", data);
 
@@ -105,9 +106,8 @@ ui_run(int (*work_fn)(void*), void* data) {
     ImGui::NewFrame();
 
     // Draw application GUI
-    if (display_should_render(debug->dmg.display)) {
-      display_render(debug->dmg.display);
-    }
+    display_wait_for_frame(display);
+    display_render(display);
     ui_update(data);
 
     // Rendering

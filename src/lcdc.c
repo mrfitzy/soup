@@ -1,11 +1,7 @@
 #include "lcdc.h"
 
 #include "bits.h"
-#include "display.h"
 #include "mem.h"
-#include "profiler_zone.h"
-
-#include <SDL3/SDL.h>
 
 void
 lcdc_init(struct lcdc* lcdc, uint8_t* memmap) {
@@ -20,41 +16,28 @@ lcdc_init(struct lcdc* lcdc, uint8_t* memmap) {
   *(lcdc->scy)  = 0;
 }
 
-static uint64_t
-line_complete_cb(void* data, SDL_TimerID id, uint64_t interval) {
-  PROFILER_ZONE_BEGIN(ctx, "lcdc");
-  struct lcdc* lcdc = data;
-  (void)id;
-
+bool
+lcdc_line_complete(struct lcdc* lcdc) {
   bool off = !bit_7(*(lcdc->lcdc));
   if (off) {
     *(lcdc->ly) = 0;
-    PROFILER_ZONE_END(ctx, "lcdc");
-    return 0;
+    return false;
   }
 
   if (*(lcdc->ly) == 153) {
     *(lcdc->ly) = 0;
-    if (lcdc->display) {
-      display_next_frame(lcdc->display);
-    }
-  } else {
-    *(lcdc->ly) += 1;
+    return true;
   }
-  PROFILER_ZONE_END(ctx, "lcdc");
-  return interval;
+
+  *(lcdc->ly) += 1;
+  return false;
 }
 
 void
 lcdc_reg_write(struct lcdc* lcdc, uint8_t data) {
   const uint8_t prev = *(lcdc->lcdc);
   *(lcdc->lcdc) = data;
-  if (bit_7(data) && !bit_7(prev)) {
-    // turn on
-    SDL_AddTimerNS(SDL_US_TO_NS(109), line_complete_cb, lcdc);
-  } else if (!bit_7(data) && bit_7(prev)) {
-    // turn off (callback cancels timer)
-    *(lcdc->ly) = 0;
+  if (!bit_7(data) && bit_7(prev)) {
+    *(lcdc->ly) = 0; // turn off
   }
 }
-
