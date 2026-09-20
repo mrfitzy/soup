@@ -12,15 +12,13 @@ fn fail(comptime fmt: []const u8, args: anytype, ret_addr: usize) noreturn {
     std.process.exit(1);
 }
 
+export fn zigAssertFail(condition: [*:0]const u8) noreturn {
+    fail("{s}", .{condition}, @returnAddress());
+}
+
 export fn zigAssertIntEqual(expect: usize, actual: usize) void {
     if (expect != actual) {
         fail("{d} != {d}", .{ expect, actual }, @returnAddress());
-    }
-}
-
-export fn zigAssertTrue(result: usize, condition: [*:0]const u8) void {
-    if (result == 0) {
-        fail("{s}", .{condition}, @returnAddress());
     }
 }
 

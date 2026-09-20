@@ -1,4 +1,5 @@
 #include "dmg.h"
+#include "log.h"
 #include "profiler.h"
 #include "ui.h"
 

@@ -1,13 +1,14 @@
 #include "regs.h"
 
 #include "assert.h"
+#include "log.h"
 #include "mem.h"
 
 #include <stdio.h>
 #include <string.h>
 
-_Static_assert(sizeof(struct flags) == 1, "unexpected size");
-_Static_assert(sizeof(struct regs) == 14, "unexpected size");
+static_assert(sizeof(struct flags) == 1, "unexpected size");
+static_assert(sizeof(struct regs) == 14, "unexpected size");
 
 void
 regs_init(struct regs* regs) {
@@ -24,8 +25,8 @@ regs_init(struct regs* regs) {
 
 uint8_t*
 regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print) {
-  uint8_t* ptr = NULL;
-  char* reg_name = NULL;
+  uint8_t* ptr;
+  char* reg_name;
   switch (regcode) {
     case 0b000:
       ptr = &regs->b;
@@ -60,18 +61,18 @@ regs_get_ptr(struct regs* regs, struct mem* mem, uint8_t regcode, bool print) {
       reg_name = "A";
       break;
     default:
-      fprintf(stderr, "error: unknown regcode %x\n", regcode);
-      assert(false);
+      fatal("unknown regcode %x", regcode);
   }
-  if (print)
-    printf("%s", reg_name);
+  if (print) {
+    log_debug(reg_name);
+  }
   return ptr;
 }
 
 static uint16_t*
 get_ptr16(struct regs* regs, uint8_t regcode, bool print, bool qq) {
-  uint16_t* ptr = NULL;
-  char* reg_name = NULL;
+  uint16_t* ptr;
+  char* reg_name;
   switch (regcode) {
     case 0b00:
       ptr = &regs->bc;
@@ -90,11 +91,10 @@ get_ptr16(struct regs* regs, uint8_t regcode, bool print, bool qq) {
       reg_name = qq ? "AF" : "SP";
       break;
     default:
-      fprintf(stderr, "error: unknown regcode %x\n", regcode);
-      assert(false);
+      fatal("unknown regcode %x", regcode);
   }
   if (print)
-    printf("%s", reg_name);
+    log_debug(reg_name);
   return ptr;
 }
 

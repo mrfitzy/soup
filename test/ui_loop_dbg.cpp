@@ -21,7 +21,7 @@ ui_run(int (*work_fn)(void*), void* data) {
   SDL_WindowFlags window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
   SDL_Window* window = SDL_CreateWindow("soup dbg", (int)(1400 * main_scale), (int)(800 * main_scale), window_flags);
   if (window == nullptr) {
-    printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
+    SDL_Log("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
     return 1;
   }
   SDL_Renderer* renderer = SDL_CreateRenderer(window, nullptr);

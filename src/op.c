@@ -4,7 +4,7 @@
 
 #include <ctype.h>
 
-_Static_assert(sizeof(struct op) == OP_SIZE, "unexpected size");
+static_assert(sizeof(struct op) == OP_SIZE, "unexpected size");
 
 uint8_t
 op_get_flag(const struct op* op, char c) {

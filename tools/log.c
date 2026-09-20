@@ -12,13 +12,16 @@ static inline void
 log(void (*log_fn)(const char*), const char* fmt, va_list ap) {
   char buf[128];
   int ret = vsnprintf(buf, sizeof(buf), fmt, ap);
-  assert(ret >= 0);
-  assert((size_t)ret < sizeof(buf));
   log_fn(buf);
+  if ((ret < 0) || ((size_t)ret >= sizeof(buf))) {
+    (void) snprintf(
+        buf, sizeof(buf), "log: previous log truncated (error %d)", ret);
+    zigLogError(buf);
+  }
 }
 
 void
-log_debug(const char* fmt, ...) {
+log_debug_impl(const char* fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   log(zigLogDebug, fmt, ap);
@@ -31,4 +34,13 @@ log_error(const char* fmt, ...) {
   va_start(ap, fmt);
   log(zigLogError, fmt, ap);
   va_end(ap);
+}
+
+[[noreturn]] void fatal(const char* fmt, ...) {
+  log_error("fatal error encountered:");
+  va_list ap;
+  va_start(ap, fmt);
+  log(zigLogError, fmt, ap);
+  va_end(ap);
+  assert(false);
 }

@@ -8,6 +8,7 @@
 #include "op.h"
 #include "profiler_zone.h"
 
+#include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,8 +62,7 @@ calc_n(uint8_t old_val, uint8_t val) {
   (void)old_val;
   (void)val;
   // all operations either set or clear n consistently
-  fprintf(stderr, "error: not expecting to need to calculate n\n");
-  assert(false);
+  fatal("not expecting to need to calculate n");
   return 0;
 }
 
@@ -98,7 +98,7 @@ update_flag_post_op(
   }
   struct flags* flags = &regs->f;
   struct flags* dirty_flags = &regs->dirty_flags;
-  uint8_t old_flag_val = 0;
+  uint8_t old_flag_val;
   switch (flag) {
   case 'z':
     if (dirty_flags->z) return !printed;
@@ -121,10 +121,9 @@ update_flag_post_op(
     flags->c = new_flag_val;
     break;
   default:
-    fprintf(stderr, "error: unknown flag %c\n", flag);
-    assert(false);
+    fatal("unknown flag %c", flag);
   }
-  printf("  updating flag %c from %x to %x\n",
+  log_debug("  updating flag %c from %x to %x",
       flag, old_flag_val, new_flag_val);
   return printed;
 }
@@ -134,16 +133,12 @@ update_flags_post_op(
     struct regs* regs, const struct op* op, uint8_t old_val, uint8_t val) {
   char flag_chars[] = { 'z', 'n', 'h', 'c' };
   flag_func_t funcs[] = { calc_z, calc_n, calc_h, calc_c };
-  bool printed = false;
   for (size_t i = 0; i < sizeof(flag_chars); i++) {
     char c = flag_chars[i];
     uint8_t flagcode = op_get_flag(op, c);
-    printed |=
-        update_flag_post_op(regs, c, flagcode, old_val, val, funcs[i]);
+    (void) update_flag_post_op(regs, c, flagcode, old_val, val, funcs[i]);
   }
   regs_mark_all_flags_dirty(regs);
-  if (printed)
-    printf("\n");
 }
 
 static void
@@ -153,22 +148,22 @@ emulate_ld_r_d16(struct regs* regs, const uint8_t* rom, size_t rom_size, uint8_t
   uint8_t regcode = bits_5_4(opcode);
   uint16_t val = *(++rom); // low byte
   val |= (*(++rom) << 8); // high byte
-  printf("LD ");
+  log_debug("LD ");
   if (regcode == 0b00) {
     regs->bc = val;
-    printf("BC,");
+    log_debug("BC,");
   } else if (regcode == 0b01) {
     regs->de = val;
-    printf("DE,");
+    log_debug("DE,");
   } else if (regcode == 0b10) {
     regs->hl = val;
-    printf("HL,");
+    log_debug("HL,");
   } else {
     assert(regcode == 0b11);
     regs->sp = val;
-    printf("SP,");
+    log_debug("SP,");
   }
-  printf("$%04x\n", val);
+  log_debug("$%04x", val);
 }
 
 /**
@@ -179,11 +174,11 @@ emulate_ld_r_d16(struct regs* regs, const uint8_t* rom, size_t rom_size, uint8_t
  */
 static void
 emulate_ld_raddr_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
-  uint8_t regcode   = bits_5_4(opcode);
+  uint8_t regcode = bits_5_4(opcode);
   uint8_t direction = bit_3(opcode);
   uint16_t addr;
   const char* reg_name;
-  printf("LD ");
+  log_debug("LD ");
   switch (regcode) {
   case 0b00:
     addr = regs->bc;
@@ -202,26 +197,24 @@ emulate_ld_raddr_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
     reg_name = "HL-";
     break;
   default:
-    fprintf(stderr, "error: unknown regcode %x\n", regcode);
-    assert(false);
+    fatal("unknown regcode %x", regcode);
   }
 
   if (direction == 0) {
     mem_write(mem, addr, regs->a);
-    printf("(%s),A\n", reg_name);
+    log_debug("(%s),A", reg_name);
   } else {
     regs->a = mem_read(mem, addr);
-    printf("A,(%s)\n", reg_name);
+    log_debug("A,(%s)", reg_name);
   }
 }
 
 static void
 emulate_xor_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode = (opcode & 0b111);
-  printf("XOR ");
+  log_debug("XOR ");
   uint8_t* reg = regs_get_ptr(regs, mem, regcode, true /* print */);
   regs->a ^= *reg;
-  printf("\n");
 }
 
 /**
@@ -235,17 +228,16 @@ emulate_bit(struct regs* regs, struct mem* mem, const struct op* op) {
   uint8_t opcode = op->opcode;
   uint8_t bit = bits_5_3(opcode);
   uint8_t regcode = bits_2_0(opcode);
-  printf("BIT %x,", bit);
+  log_debug("BIT %x,", bit);
   uint8_t* ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   uint8_t bitval = bit_n(*ptr, bit);
-  printf("\n");
   update_flags_post_op(regs, op, *ptr, bitval);
 }
 
 static void
 regs_update_n(struct regs* regs, bool set) {
   assert(!regs->dirty_flags.n);
-  printf("  updating flag n from %x to %x (manually)\n", regs->f.n, set);
+  log_debug("  updating flag n from %x to %x (manually)", regs->f.n, set);
   regs->f.n = set ? 1 : 0;
   regs->dirty_flags.n = 1;
 }
@@ -253,7 +245,7 @@ regs_update_n(struct regs* regs, bool set) {
 static void
 regs_update_cy(struct regs* regs, bool set) {
   assert(!regs->dirty_flags.c);
-  printf("  updating flag c from %x to %x (manually)\n", regs->f.c, set);
+  log_debug("  updating flag c from %x to %x (manually)", regs->f.c, set);
   regs->f.c = set ? 1 : 0;
   regs->dirty_flags.c = 1;
 }
@@ -262,15 +254,11 @@ static void
 emulate_rl(
     struct regs* regs,
     struct mem* mem,
-    const struct op* op,
-    bool is_cb_op) {
+    const struct op* op) {
   uint8_t regcode = bits_2_0(op->opcode);
-  printf("RL");
-  if (is_cb_op)
-    printf(" ");
+  log_debug("RL");
   uint8_t* ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   uint8_t prev = *ptr;
-  printf("\n");
   *ptr = ((*ptr << 1) | regs->f.c);
   regs_update_cy(regs, bit_7(prev));
   update_flags_post_op(regs, op, prev, *ptr);
@@ -291,7 +279,7 @@ emulate_cb_instruction(
   switch (bitopcode) {
   case 0x10: case 0x11: case 0x12: case 0x13:
   case 0x14: case 0x15: case 0x16: case 0x17:
-    emulate_rl(regs, mem, cb_op, true /* is_cb_op */);
+    emulate_rl(regs, mem, cb_op);
     break;
   default:
     handled = false;
@@ -310,11 +298,10 @@ emulate_cb_instruction(
 
 post_cb_op:
   if (!handled) {
-    fprintf(stderr, "\nerror: bitopcode %02x not yet implemented\n", bitopcode);
     print_op(cb_op);
     print_regs(regs);
     print_mem(mem);
-    assert(false);
+    fatal("bitopcode %02x not yet implemented", bitopcode);
   }
 }
 
@@ -324,9 +311,9 @@ emulate_jr(
     const uint8_t* rom,
     size_t rom_size) {
   assert(rom_size > 1);
-  printf("JR ");
+  log_debug("JR ");
   int8_t jump_len = (int8_t)(rom[1]) + 2;
-  printf("$%04x\n", regs->pc + jump_len);
+  log_debug("$%04x", regs->pc + jump_len);
   regs->pc += jump_len;
 }
 
@@ -343,34 +330,33 @@ emulate_jr_if(
   assert(rom_size > 1);
   uint8_t opcode = rom[0];
   uint8_t condcode = bits_4_3(opcode);
-  bool condition = false;
-  printf("JR ");
+  bool condition;
+  log_debug("JR ");
   switch (condcode) {
   case 0b00:
     condition = !regs->f.z;
-    printf("NZ");
+    log_debug("NZ");
     break;
   case 0b01:
     condition = regs->f.z;
-    printf("Z");
+    log_debug("Z");
     break;
   case 0b10:
     condition = !regs->f.c;
-    printf("NC");
+    log_debug("NC");
     break;
   case 0b11:
     condition = regs->f.c;
-    printf("C");
+    log_debug("C");
     break;
   default:
-    fprintf(stderr, "error: unknown condition %02x", condcode);
-    assert(false);
+    fatal("unknown condition %02x", condcode);
   }
   int8_t jump_len = (int8_t)(rom[1]) + 2;
-  printf(",$%04x\n", regs->pc + jump_len);
+  log_debug(",$%04x", regs->pc + jump_len);
   regs->pc += condition ? jump_len : 2;
   if (!condition)
-    printf("break\n");
+    log_debug("break");
 }
 
 /**
@@ -388,10 +374,10 @@ emulate_ld_r_n(
   uint8_t opcode = rom[0];
   uint8_t n = rom[1];
   uint8_t regcode = bits_5_3(opcode);
-  printf("LD ");
+  log_debug("LD ");
   uint8_t* reg_ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   *reg_ptr = n;
-  printf(",$%02x\n", n);
+  log_debug(",$%02x", n);
 }
 
 static void
@@ -399,10 +385,10 @@ emulate_ld_rc_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t direction = bit_4(opcode);
   uint16_t addr = 0xff00 + regs->c;
   if (direction == 0) {
-    printf("LD ($FF00+C),A\n");
+    log_debug("LD ($FF00+C),A");
     mem_write(mem, addr, regs->a);
   } else {
-    printf("LD A,($FF00+C)\n");
+    log_debug("LD A,($FF00+C)");
     regs->a = mem_read(mem, addr);
   }
 }
@@ -410,11 +396,10 @@ emulate_ld_rc_a_bidi(struct regs* regs, struct mem* mem, uint8_t opcode) {
 static void
 emulate_inc(struct regs* regs, struct mem* mem, const struct op* op) {
   uint8_t regcode = bits_5_3(op->opcode);
-  printf("INC ");
+  log_debug("INC ");
   uint8_t* ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   uint8_t prev = *ptr;
   (*ptr)++;
-  printf("\n");
   update_flags_post_op(regs, op, prev, *ptr);
 }
 
@@ -422,12 +407,11 @@ static void
 emulate_ld_r_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode_dst = bits_5_3(opcode);
   uint8_t regcode_src = bits_2_0(opcode);
-  printf("LD ");
+  log_debug("LD ");
   uint8_t* ptr_dst = regs_get_ptr(regs, mem, regcode_dst, true /* print */);
-  printf(",");
+  log_debug(",");
   uint8_t* ptr_src = regs_get_ptr(regs, mem, regcode_src, true /* print */);
   *ptr_dst = *ptr_src;
-  printf("\n");
 }
 
 static void
@@ -441,10 +425,10 @@ emulate_ld_rn_a_bidi(
   uint16_t addr = 0xff00 + rom[1];
   uint8_t direction = bit_4(opcode);
   if (direction == 0) {
-    printf("LD ($FF00+$%X),A\n", rom[1]);
+    log_debug("LD ($FF00+$%X),A", rom[1]);
     mem_write(mem, addr, regs->a);
   } else {
-    printf("LD A,($FF00+$%X)\n", rom[1]);
+    log_debug("LD A,($FF00+$%X)", rom[1]);
     regs->a = mem_read(mem, addr);
   }
 }
@@ -459,7 +443,7 @@ emulate_call(
   uint8_t lo = rom[1];
   uint8_t hi = rom[2];
   uint16_t addr = ((hi << 8) | lo);
-  printf("CALL $%04X\n", addr);
+  log_debug("CALL $%04X\n", addr);
   regs->pc += 3;
   mem_write(mem, (regs->sp - 1), regs->pc_hi);
   mem_write(mem, (regs->sp - 2), regs->pc_lo);
@@ -470,10 +454,9 @@ emulate_call(
 static void
 emulate_push(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode = bits_5_4(opcode);
-  printf("PUSH ");
+  log_debug("PUSH ");
   uint8_t* reg_ptr =
       (uint8_t*)regs_get_ptr16_qq(regs, regcode, true /* print */);
-  printf("\n");
   // N.B. assumes little-endian
   uint8_t lo = reg_ptr[0];
   uint8_t hi = reg_ptr[1];
@@ -485,9 +468,8 @@ emulate_push(struct regs* regs, struct mem* mem, uint8_t opcode) {
 static void
 emulate_pop(struct regs* regs, struct mem* mem, uint8_t opcode) {
   uint8_t regcode = bits_5_4(opcode);
-  printf("POP ");
+  log_debug("POP ");
   uint8_t* ptr = (uint8_t*)regs_get_ptr16_qq(regs, regcode, true /* print */);
-  printf("\n");
   // N.B. assumes little-endian
   uint8_t lo = mem_read(mem, regs->sp);
   uint8_t hi = mem_read(mem, (regs->sp + 1));
@@ -499,10 +481,9 @@ emulate_pop(struct regs* regs, struct mem* mem, uint8_t opcode) {
 static void
 emulate_dec(struct regs* regs, struct mem* mem, const struct op* op) {
   uint8_t regcode = bits_5_3(op->opcode);
-  printf("DEC ");
+  log_debug("DEC ");
   uint8_t* ptr = regs_get_ptr(regs, mem, regcode, true /* print */);
   uint8_t prev = *ptr;
-  printf("\n");
   (*ptr)--;
   regs_update_n(regs, 1);
   update_flags_post_op(regs, op, prev, *ptr);
@@ -511,15 +492,14 @@ emulate_dec(struct regs* regs, struct mem* mem, const struct op* op) {
 static void
 emulate_inc16(struct regs* regs, uint8_t opcode) {
   uint8_t regcode = bits_5_4(opcode);
-  printf("INC ");
+  log_debug("INC ");
   uint16_t* ptr = regs_get_ptr16_ss(regs, regcode, true /* print */);
-  printf("\n");
   (*ptr)++;
 }
 
 static void
 emulate_ret(struct regs* regs, struct mem* mem) {
-  printf("RET\n");
+  log_debug("RET");
   regs->pc_lo = mem_read(mem, regs->sp++);
   regs->pc_hi = mem_read(mem, regs->sp++);
 }
@@ -530,7 +510,7 @@ emulate_cp_d8(struct regs* regs, const uint8_t* rom, size_t rom_size) {
   auto flags = &regs->f;
   uint8_t a = regs->a;
   uint8_t b = rom[1];
-  printf("CP $%02x\n", b);
+  log_debug("CP $%02x", b);
   flags->z = ((a == b) ? 1 : 0);
   flags->n = 1;
   flags->h = ((nibble_lo(b) > nibble_lo(a)) ? 1 : 0);
@@ -543,11 +523,10 @@ emulate_sub_r(struct regs* regs, struct mem* mem, uint8_t opcode) {
   auto flags = &regs->f;
   uint8_t regcode = bits_2_0(opcode);
   uint8_t a = regs->a;
-  printf("SUB ");
+  log_debug("SUB ");
   uint8_t* reg = regs_get_ptr(regs, mem, regcode, true /* print */);
   uint8_t b = *reg;
   regs->a -= b;
-  printf("\n");
   flags->z = ((a == b) ? 1 : 0);
   flags->n = 1;
   flags->h = ((nibble_lo(b) > nibble_lo(a)) ? 1 : 0);
@@ -566,11 +545,11 @@ emulate_ld_d16_a(
   mem_write(mem, addr, regs->a);
 }
 
-void
+const struct op*
 cpu_execute_instruction(struct cpu* cpu) {
   PROFILER_ZONE_BEGIN(ctx, "cpu_execute_instruction");
   const struct op* cb_op;
-  const struct op* op = get_op(cpu, &cb_op);
+  auto op = get_op(cpu, &cb_op);
   uint8_t opcode = op->opcode;
   struct regs* regs = &cpu->regs;
   struct mem* mem = cpu->mem;
@@ -591,7 +570,7 @@ cpu_execute_instruction(struct cpu* cpu) {
     emulate_dec(regs, mem, op);
     break;
   case 0x17: // short-circuit for RL A
-    emulate_rl(regs, mem, op, false /* is_cb_op */);
+    emulate_rl(regs, mem, op);
     break;
   case 0x18:
     emulate_jr(regs, rom, rom_size);
@@ -662,20 +641,19 @@ cpu_execute_instruction(struct cpu* cpu) {
 
 post_op:
   if (!handled) {
-    log_error("opcode %02x not yet implemented", opcode);
     print_op(op);
     print_regs(regs);
     print_mem(mem);
-    assert(false);
+    fatal("opcode %02x not yet implemented", opcode);
   }
   if (!pc_handled)
     regs_update_pc(regs, cb_op ? cb_op : op);
   // fallback logic for flags uses accumulator
   update_flags_post_op(regs, cb_op ? cb_op : op, prev_a, regs->a);
   regs_mark_all_flags_clean(regs);
-  fflush(stderr);
-  fflush(stdout);
   PROFILER_ZONE_END(ctx, "cpu_execute_instruction");
+
+  return (op->opcode == 0xcb) ? cb_op : op;
 }
 
 void
