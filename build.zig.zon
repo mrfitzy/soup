@@ -18,6 +18,7 @@
         .tracy = .{
             .url = "git+https://github.com/mrfitzy/tracy-zig.git#a22532f49e92fe93fe134afef6b223e71bb9f295",
             .hash = "public-0.0.0-7NmBB8wPAACN2jj8Rg4jFcGfuQJsC5t4c8fhMAHlw8mc",
+            .lazy = true,
         },
     },
     .paths = .{""},
