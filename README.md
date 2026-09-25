@@ -1,5 +1,10 @@
+# Soup
+Software-based DMG emulator under active development.
+
+# Requirements
 Requires zig 0.16.0.
 
+# Getting started
 Launch the emulator:
 ```
 zig build run
