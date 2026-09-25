@@ -42,6 +42,7 @@ dmg_destroy(struct dmg_system* dmg) {
     display_destroy(dmg->display);
     dmg->display = NULL;
   }
+  mem_destroy(&dmg->mem);
 }
 
 // 154 lines/frame * 114 cycles/line * 1000 ns/1.048576 cycle

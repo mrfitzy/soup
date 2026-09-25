@@ -55,6 +55,8 @@ struct mem {
 
 void mem_init(struct mem*, struct apu*,  struct lcdc*, uint16_t max_addr);
 
+void mem_destroy(struct mem*);
+
 uint8_t mem_read(const struct mem*, uint16_t addr);
 
 void mem_write(struct mem*, uint16_t addr, uint8_t data);

@@ -26,9 +26,9 @@ mem_init(
   size_t size = (size_t)max_addr + 1;
   uint8_t* buf = malloc(size);
   assert(buf);
-
   memset(buf, 0xff, size);
   memset(buf + REG_APU_MIN, 0, REG_APU_MAX - REG_APU_MIN + 1);
+
   mem->apu = apu;
   mem->lcdc = lcdc;
   mem->mem = buf;
@@ -38,6 +38,12 @@ mem_init(
   buf[0xff4f] = 0; // VBK
 
   memcpy(buf + 0x104, g_logo, sizeof(g_logo));
+}
+
+void
+mem_destroy(struct mem* mem) {
+  free(mem->mem);
+  mem->mem = NULL;
 }
 
 uint8_t
