@@ -5,12 +5,12 @@ Software-based DMG emulator under active development.
 Requires zig 0.16.0.
 
 # Getting started
-Launch the emulator:
+Launch the emulator and run the boot ROM:
 ```
 zig build run
 ```
 
-Launch integrated debugger:
+Launch integrated ROM debugger:
 ```
 zig build debug
 ```
