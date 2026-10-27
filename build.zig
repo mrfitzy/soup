@@ -43,12 +43,23 @@ pub fn build(b: *std.Build) void {
 
 fn buildTool(b: *std.Build, options: BuildOptions) [2]std.Build.LazyPath {
     // tool executable
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("include/op.h"),
+        .target = b.graph.host,
+        .optimize = options.optimize,
+    });
     const tool = b.addExecutable(.{
         .name = "gen_ops",
         .root_module = b.createModule(.{
             .root_source_file = b.path("tools/gen_ops.zig"),
             .target = b.graph.host,
             .optimize = options.optimize,
+            .imports = &.{
+                .{
+                    .name = "c",
+                    .module = translate_c.createModule(),
+                },
+            },
         }),
     });
     tool.root_module.addIncludePath(b.path("include"));

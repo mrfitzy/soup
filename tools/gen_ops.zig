@@ -1,9 +1,7 @@
 const std = @import("std");
 const args = @import("args");
 
-const c = @cImport({
-    @cInclude("op.h");
-});
+const c = @import("c");
 
 const skip: [11]u8 = .{
     0xD3,

@@ -3,8 +3,8 @@
     .version = "0.16.0",
     .dependencies = .{
         .args = .{
-            .url = "https://github.com/muhammad-fiaz/args.zig/archive/refs/tags/0.0.7.tar.gz",
-            .hash = "args-0.0.7-8hzgbvPiCAAcEM4R90pCppGhHBKi0Uiw90tbGvipjVfc",
+            .url = "https://github.com/muhammad-fiaz/args.zig/archive/refs/tags/0.0.9.tar.gz",
+            .hash = "args-0.0.9-8hzgbh4KCgB9UYVNvr6R_GmZgq7j1DpV2kGcqn3F36Q1",
         },
         .@"macos-sdk" = .{
             .url = "https://github.com/mrfitzy/macos-sdk/archive/refs/tags/MacOSX26.5.tar.gz",
@@ -12,8 +12,8 @@
             .lazy = true,
         },
         .sdl = .{
-            .url = "git+https://github.com/allyourcodebase/SDL.git#14323c217f7a23b409909508ea6b4901ba2567c5",
-            .hash = "sdl-1.0.1+3.4.4-i4QD0aSSqQCKa4hqLCExg4sjLPWkuFsXEvl8kmD6zakm",
+            .url = "git+https://github.com/allyourcodebase/SDL.git#ac53498fd2fc3492846cb72df3b42f74c06e3127",
+            .hash = "sdl-1.0.6+3.4.18-i4QD0XUOqgAhXRPlBWGozPwEkirghh0JX4Q-OCuEcX_X",
         },
         .tracy = .{
             .url = "git+https://github.com/mrfitzy/tracy-zig.git#a22532f49e92fe93fe134afef6b223e71bb9f295",
